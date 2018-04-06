@@ -1,0 +1,30 @@
+{
+    "__default__":
+    {
+        "account": "UOM0040",
+        "time": "00:15:00",
+        "n": 1,
+        "partition": "main",
+        "memory": 8192
+    },
+
+    "annotate":
+    {
+        "time": "00:20:00",
+        "n": 4
+    },
+
+    "filter":
+    {
+        "time": "00:10:00",
+        "n": 1,
+        "memory": 1024
+    },
+
+    "stats":
+    {
+        "time": "00:10:00",
+        "n": 1,
+        "memory": 1024
+    }
+}
