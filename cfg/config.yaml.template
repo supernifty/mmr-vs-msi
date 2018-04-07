@@ -1,0 +1,9 @@
+
+genome: 'reference/genome.fa'
+genome_lengths: 'reference/genome.lengths'
+refseq: 'reference/refseq180404'
+genes: 'cfg/genes.txt'
+slop: 1000
+samples: [
+  SAMPLES
+]
