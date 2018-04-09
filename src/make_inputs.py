@@ -12,7 +12,8 @@ sys.stderr.write('generating symlinks...')
 samples = set()
 for line in open('cfg/samples', 'r'):
   sample = line.strip('\n')
-  run('ln -s /scratch/VR0211/pan-prostate/out/{sample}.varscan.vcf in/'.format(sample=sample))
+  run('ln -s /scratch/VR0211/pan-prostate/out/{sample}.varscan.vcf in/'.format(sample=sample)) # snvs
+  run('ln -s /scratch/VR0211/pan-prostate/out/{sample}.varscan_indel.vcf in/'.format(sample=sample)) # indels
   samples.add(sample)
 
 sys.stderr.write('making config.yaml file...')
