@@ -8,10 +8,12 @@ cancer_type: 'prostate'
 slop: 1000
 callers: [
   'varscan',
-  'varscan_indel'
+  'varscan_indel',
+  'gridss'
 ]
 msi_callers: [
-  'varscan_indel'
+  'varscan_indel',
+  'gridss'
 ]
 samples: [
   SAMPLES

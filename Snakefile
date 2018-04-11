@@ -11,7 +11,7 @@ rule all:
 rule msi_assess:
   input:
     "out/mmr.summary",
-    expand("out/{sample}.msi.{caller}.filter.vcf", sample=config['samples'], caller=config['msi_callers'])
+    expand("out/{sample}.msi.{caller}.annotated.vcf", sample=config['samples'], caller=config['msi_callers'])
   output:
     "out/msi.summary"
   log:
@@ -20,50 +20,59 @@ rule msi_assess:
     "src/msi_stats.py {input} 1>{output} 2>{log.stderr}"
 
 # msi output is list of samples and the degree of MSI found
-rule msi_filter:
+rule annotate_msi:
   input:
-    "out/regions.msi.cancer_genes.bed",
-    "in/{sample}.{caller}.vcf" # depends on msi_callers
+    "out/regions.msi.final.bed",
+    "in/{sample}.{caller}.vcf" # each unfiltered msi_caller
   output:
-    "out/{sample}.msi.{caller}.filter.vcf"
+    "out/{sample}.msi.{caller}.annotated.vcf" # makes a filtered vcf
   log:
     stderr="log/msi_filter.{sample}.{caller}.stderr",
-    stdout="log/msi_filter.{sample}.{caller}.stdout"
   shell:
-    "src/msi_filter.sh {config[genome]} {input} {output} 1>{log.stdout} 2>{log.stderr}"
+    "src/annotate_vcf.py {input[0]} < {input[1]} 1>{output} 2>{log.stderr}"
 
-# make msi bed file specific for this cancer type
-rule make_msi_cancer_regions:
+# add oncogene annotations to msi list
+rule annotate_msi_oncogene_regions:
   input:
-    "out/genes.msi", # list of genes 
-    config["refseq"], # list of gene regions
-    "out/regions.msi.bed" # list of msi regions
+    "out/regions.oncogenes.bed", # list of oncogene regions 
+    "out/regions.msi.bed", # list of msi regions
   output:
-    "out/regions.msi.cancer_genes.bed" # intersection of gene regions and msi regions
+    "out/regions.msi.final.bed" # annotated regions
+  log:
+    stderr="log/annotate_bed.stderr",
+  shell:
+    "src/annotate_bed.py oncogene {input[0]} < {input[1]} > {output} 2> {log.stderr}"
+
+# add oncogene annotations to msi list
+rule make_oncogene_regions:
+  input:
+    "out/oncogenes.msi", # list of genes 
+    config["refseq"], # list of refseq regions
+  output:
+    "out/regions.oncogenes.bed" # oncogene regions
   shell:
     "module load bedtools-intel/2.27.1; "
-    "src/make_bed.py {input[0]} < {input[1]} | sort -k1,1 -k2,2n | bedtools intersect -a {input[2]} -b - -wa > {output}"
+    "src/make_bed.py {input[0]} < {input[1]} | sort -k1,1 -k2,2n > {output}" 
 
 # make a list of genes relevant to msi for the cancer being studied
-rule make_msi_cancer_genes:
+rule make_msi_oncogenes:
   input:
     config['cosmic']
   output:
-    "out/genes.msi"
+    "out/oncogenes.msi"
   shell:
     "cut -f1,8,9,10,11 < {input} | grep -i {config[cancer_type]} | cut -f1 | sort > {output}"
 
 # limits msi regions by length and repeat type
 rule make_msi_regions:
   input:
-    "cfg/all-msi-candidates.bed"
+    "reference/msi.candidates.bed"
   output:
     "out/regions.msi.bed"
   log:
     stderr="log/make_msi_regions.stderr",
   shell:
-    "src/filter_msi.py --minlen 10 --maxlen 100 --minrepeat 1 --maxrepeat 4 --exons_only < {input} 1>{output} 2>{log.stderr}"
-    #"src/filter_msi.py --minlen 10 --maxlen 100 --minrepeat 1 --maxrepeat 4 < {input} 1>{output} 2>{log.stderr}"
+    "src/filter_msi.py --minlen 10 --maxlen 100000 --minrepeat 1 --maxrepeat 4 < {input} 1>{output} 2>{log.stderr}"
 
 
 ##### mmr #####
@@ -77,7 +86,7 @@ rule mmr_stats:
   log:
     stderr="log/mmr.summary.stderr",
   shell:
-    "src/mmr_stats.py {input} 1>{output} 2>{log.stderr}"
+    "src/mmr_stats.py --all --verbose {input} 1>{output} 2>{log.stderr}"
 
 # applies filtering to the annotated vcf files
 rule mmr_filter:
@@ -86,9 +95,9 @@ rule mmr_filter:
   output:
     "out/{sample}.mmr.{caller}.filter.vcf"
   log:
-    stderr="log/filter.{sample}.stderr",
+    stderr="log/filter.{sample}.{caller}.stderr",
   shell:
-    "src/filter_vcf.py < {input} 1>{output} 2>{log.stderr}"
+    "src/filter_vcf.py {wildcards.caller} < {input} 1>{output} 2>{log.stderr}"
 
 # annotates vcf files with vep
 rule mmr_annotate:
