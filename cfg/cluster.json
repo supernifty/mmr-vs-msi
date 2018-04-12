@@ -21,10 +21,10 @@
         "memory": 1024
     },
 
-    "stats":
+    "msi_assess":
     {
-        "time": "00:10:00",
+        "time": "01:00:00",
         "n": 1,
-        "memory": 1024
+        "memory": 4096
     }
 }
