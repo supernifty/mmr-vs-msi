@@ -1,11 +1,11 @@
 {
     "__default__":
     {
-        "account": "VR0320",
+        "account": "UOM0040",
         "time": "00:15:00",
         "n": 1,
         "partition": "main",
-        "memory": 8192
+        "memory": 1024
     },
 
     "annotate":
@@ -21,9 +21,23 @@
         "memory": 1024
     },
 
-    "msi_assess":
+    "count_mutations":
     {
         "time": "01:00:00",
+        "n": 1,
+        "memory": 1024
+    },
+
+    "msi_vep":
+    {
+        "time": "24:00:00",
+        "n": 4,
+        "memory": 32768
+    },
+
+    "msi_assess":
+    {
+        "time": "02:00:00",
         "n": 1,
         "memory": 4096
     }

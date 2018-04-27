@@ -1,0 +1,81 @@
+
+##### mmr #####
+
+# tumour specific - remove germline calls
+rule filter_somatic_mmr:
+  input:
+    "out/{tumour}.mmr.{caller}.filter.vcf"
+  output:
+    "out/{tumour}.mmr.{caller}.filter.somatic.vcf"
+  log:
+    stderr="log/filter_somatic_mmr.{tumour}.{caller}.stderr"
+  shell:
+    "src/subtract_germline.sh {input} >{output} 2>{log.stderr}"
+
+rule common_mmr_mutations:
+  input:
+    expand("out/{sample}.mmr.{caller}.filter.vcf", sample=config['samples'], caller=config['callers']),
+  output:
+    "out/mmr.common"
+  shell:
+    "src/find_common_mutations.py --vcfs {input} --threshold 0.1 > {output}"
+
+# mmr analysis output is a list of candidates likely to be dMMR
+rule mmr_stats:
+  input:
+    expand("out/{tumour}.mmr.{caller}.filter.somatic.vcf", tumour=config['tumours'], caller=config['callers']),
+    expand("out/{tumour}.mmr.hmmcopy.filter.bed", tumour=config['tumours'])
+  output:
+    "out/mmr.summary"
+  log:
+    stderr="log/mmr.summary.stderr",
+  shell:
+    "src/mmr_stats.py --all --verbose {input} 1>{output} 2>{log.stderr}"
+
+# mmr analysis output is a list of candidates likely to be dMMR
+#rule mmr_stats:
+#  input:
+#    expand("out/{sample}.mmr.{caller}.filter.vcf", sample=config['samples'], caller=config['callers']),
+#    expand("out/{sample}.mmr.hmmcopy.filter.bed", sample=config['samples'])
+#  output:
+#    "out/mmr.summary"
+#  log:
+#    stderr="log/mmr.summary.stderr",
+#  shell:
+#    "src/mmr_stats.py --all --verbose {input} 1>{output} 2>{log.stderr}"
+
+# applies filtering to the annotated vcf files
+rule mmr_filter:
+  input:
+    "out/{sample}.mmr.{caller}.vep.vcf",
+  output:
+    "out/{sample}.mmr.{caller}.filter.vcf"
+  log:
+    stderr="log/filter.{sample}.{caller}.stderr"
+  shell:
+    "src/filter_vcf.py {wildcards.caller} < {input} 1>{output} 2>{log.stderr}"
+
+# annotates vcf files with vep
+rule mmr_vep:
+  input:
+    "out/regions.mmr.bed",
+    "in/{sample}.{caller}.vcf"
+  output:
+    "out/{sample}.mmr.{caller}.vep.vcf",
+  log:
+    stderr="log/annotate.{sample}.{caller}.stderr",
+    stdout="log/annotate.{sample}.{caller}.stdout"
+  shell:
+    "src/annotate.sh {config[genome]} {input} {output} 1>{log.stdout} 2>{log.stderr}"
+
+# hmmcopy
+rule hmmcopy_filter:
+  input:
+    "in/{sample}.hmmcopy"
+  output:
+    "out/{sample}.mmr.hmmcopy.filter.bed"
+  shell:
+    "module load bedtools-intel/2.27.1; "
+    "bedtools intersect -b {input} -a out/regions.mmr.bed -wa -wb | awk '{{ if ($8 != 3) print }}' > {output}"
+
+

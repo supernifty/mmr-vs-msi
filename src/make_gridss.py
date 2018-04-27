@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+'''
+  extracts just the calls for the provided sample name from matched calls
+'''
 
 import argparse
 import logging
@@ -6,7 +9,7 @@ import sys
 
 import cyvcf2
 
-QUAL=1000
+QUAL=500
 UUIDS="cfg/samples.uuids"
 
 def main(sample):

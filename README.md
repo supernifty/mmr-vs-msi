@@ -54,3 +54,10 @@ run.sh # kicks off the snakemake script
 
 ## Implementation
 * Snakefile contains the main pipelinee
+
+## TODO/Ideas
+* gridss breakends are doubled if they are both within the gene (e.g. deletion)
+* haplotype to find double deactivation
+* calculate hypermutation -> total number of mutations per megabase
+* cadd score
+* filter on dbsnp, 1000GP, GnomAd
