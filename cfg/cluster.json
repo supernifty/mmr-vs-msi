@@ -17,14 +17,12 @@
     "filter":
     {
         "time": "00:10:00",
-        "n": 1,
         "memory": 1024
     },
 
     "count_mutations":
     {
         "time": "01:00:00",
-        "n": 1,
         "memory": 1024
     },
 
@@ -38,7 +36,12 @@
     "msi_assess":
     {
         "time": "02:00:00",
-        "n": 1,
+        "memory": 4096
+    },
+
+    "annotate_msi":
+    {
+        "time": "01:00:00",
         "memory": 4096
     }
 }

@@ -1,29 +1,10 @@
 
 ##### mmr #####
 
-# tumour specific - remove germline calls
-rule filter_somatic_mmr:
-  input:
-    "out/{tumour}.mmr.{caller}.filter.vcf"
-  output:
-    "out/{tumour}.mmr.{caller}.filter.somatic.vcf"
-  log:
-    stderr="log/filter_somatic_mmr.{tumour}.{caller}.stderr"
-  shell:
-    "src/subtract_germline.sh {input} >{output} 2>{log.stderr}"
-
-rule common_mmr_mutations:
-  input:
-    expand("out/{sample}.mmr.{caller}.filter.vcf", sample=config['samples'], caller=config['callers']),
-  output:
-    "out/mmr.common"
-  shell:
-    "src/find_common_mutations.py --vcfs {input} --threshold 0.1 > {output}"
-
 # mmr analysis output is a list of candidates likely to be dMMR
 rule mmr_stats:
   input:
-    expand("out/{tumour}.mmr.{caller}.filter.somatic.vcf", tumour=config['tumours'], caller=config['callers']),
+    expand("out/{tumour}.mmr.{caller}.filter.somatic.rare.vcf", tumour=config['tumours'], caller=config['callers']),
     expand("out/{tumour}.mmr.hmmcopy.filter.bed", tumour=config['tumours'])
   output:
     "out/mmr.summary"
@@ -31,6 +12,38 @@ rule mmr_stats:
     stderr="log/mmr.summary.stderr",
   shell:
     "src/mmr_stats.py --all --verbose {input} 1>{output} 2>{log.stderr}"
+
+# remove common
+rule filter_common_mmr:
+  input:
+    "out/mmr.{caller}.common",
+    "out/{tumour}.mmr.{caller}.filter.somatic.vcf"
+  output:
+    "out/{tumour}.mmr.{caller}.filter.somatic.rare.vcf"
+  log:
+    stderr="log/filter_common_mmr.{tumour}.{caller}.stderr"
+  shell:
+    "src/filter_common_mutations.py --threshold 0.2 --common {input[0]} --position_only < {input[1]} >{output} 2>{log.stderr}"
+
+# tumour specific - remove germline calls
+rule filter_somatic_mmr:
+  input:
+    "out/{tumour}.mmr.{caller}.filter.vcf",
+    expand("out/{sample}.mmr.{{caller}}.filter.vcf", sample=config['samples']) # we depend on the germline which is one of the other samples
+  output:
+    "out/{tumour}.mmr.{caller}.filter.somatic.vcf"
+  log:
+    stderr="log/filter_somatic_mmr.{tumour}.{caller}.stderr"
+  shell:
+    "src/subtract_germline.sh {input[0]} >{output} 2>{log.stderr}"
+
+rule common_mmr_mutations:
+  input:
+    expand("out/{tumour}.mmr.{{caller}}.filter.somatic.vcf", tumour=config['tumours']),
+  output:
+    "out/mmr.{caller}.common"
+  shell:
+    "src/find_common_mutations.py --vcfs {input} --threshold 2 --position_only > {output}"
 
 # mmr analysis output is a list of candidates likely to be dMMR
 #rule mmr_stats:
@@ -47,7 +60,7 @@ rule mmr_stats:
 # applies filtering to the annotated vcf files
 rule mmr_filter:
   input:
-    "out/{sample}.mmr.{caller}.vep.vcf",
+    "out/{sample}.mmr.{caller}.vep.vcf"
   output:
     "out/{sample}.mmr.{caller}.filter.vcf"
   log:
@@ -61,7 +74,7 @@ rule mmr_vep:
     "out/regions.mmr.bed",
     "in/{sample}.{caller}.vcf"
   output:
-    "out/{sample}.mmr.{caller}.vep.vcf",
+    "out/{sample}.mmr.{caller}.vep.vcf"
   log:
     stderr="log/annotate.{sample}.{caller}.stderr",
     stdout="log/annotate.{sample}.{caller}.stdout"
@@ -71,11 +84,23 @@ rule mmr_vep:
 # hmmcopy
 rule hmmcopy_filter:
   input:
-    "in/{sample}.hmmcopy"
+    "in/{sample}.hmmcopy",
+    "out/regions.mmr.bed"
   output:
     "out/{sample}.mmr.hmmcopy.filter.bed"
   shell:
     "module load bedtools-intel/2.27.1; "
-    "bedtools intersect -b {input} -a out/regions.mmr.bed -wa -wb | awk '{{ if ($8 != 3) print }}' > {output}"
+    "bedtools intersect -b {input[0]} -a {input[1]} -wa -wb | awk '{{ if ($8 != 3) print }}' > {output}"
 
+# generates bed regions to filter vcfs on based on the provided genes, and refseq exons
+rule make_mmr_regions:
+  input: 
+    config["genes_mmr"],
+    config["refseq"],
+    config["genome_lengths"]
+  output:
+    "out/regions.mmr.bed"
+  shell:
+    "module load bedtools-intel/2.27.1; "
+    "src/make_bed.py {input[0]} < {input[1]} | sort -k1,1 -k2,2n | bedtools merge -i - -c 4 -o distinct | bedtools slop -b {config[slop]} -i - -g {input[2]} > {output}"
 

@@ -12,8 +12,7 @@ callers: [
   'gridss'
 ]
 msi_callers: [
-  'varscan_indel',
-  'gridss'
+  'pindel'
 ]
 samples: [
   SAMPLES

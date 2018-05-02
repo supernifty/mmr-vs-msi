@@ -4,7 +4,7 @@
 # snakemake -p
 
 # run on the cluster
-MAXJOBS=32
+MAXJOBS=64
 PREFIX="msi"
 
 rm log/* 

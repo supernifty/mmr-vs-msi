@@ -32,12 +32,34 @@ rule msi_measure_summary:
   shell:
     "cat {input} > {output}"
 
+rule msi_cluster_vis:
+  input:
+    "out/msi.cluster",
+    "cfg/htsdb.csv"
+  output:
+    "out/msi.dendrogram.png"
+  log:
+    stderr="log/msi_cluster_vis.stderr",
+  shell:
+    "src/cluster_msi.py --image {output} --verbose --categories {input[1]} <{input[0]} 2>{log.stderr}"
+
+rule msi_cluster_all:
+  input:
+    bed="out/regions.msi.final.exons.bed",
+    vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.vcf", tumour=config['tumours'], caller=config['msi_callers']),
+  output:
+    "out/msi.cluster"
+  log:
+    stderr="log/msi.cluster.stderr",
+  shell:
+    "src/count_mutations_by_region.py --bed {input.bed} --vcf {input.vcfs} >{output} 2>{log.stderr}"
+
 # tumour specific analysis
 # note that we use the vcf before germline has been subtracted out
 rule msi_measure:
   input:
     "out/regions.msi.final.exons.bed", # exons only for now
-    expand("out/{{tumour}}.msi.{caller}.annotated.vcf", caller=config['msi_callers']) # TODO support multiple callers (?)
+    expand("out/{{tumour}}.msi.{caller}.annotated.vcf", caller=config['msi_callers']) # TODO multiple callers not supported (yet?)
   output:
     "out/{tumour}.msi_measure_detail",
     "out/{tumour}.msi_measure_summary"
@@ -49,14 +71,14 @@ rule msi_measure:
 # tumour specific - remove germline calls
 rule filter_somatic_msi:
   input:
-    "out/{tumour}.msi.{caller}.annotated.vcf"
+    "out/{tumour}.msi.{caller}.annotated.vcf",
+    expand("out/{sample}.msi.{{caller}}.annotated.vcf", sample=config['samples']) # we depend on the germline which is one of the other samples
   output:
     "out/{tumour}.msi.{caller}.annotated.somatic.vcf"
   log:
     stderr="log/filter_somatic_msi.{tumour}.{caller}.stderr"
   shell:
-    "src/subtract_germline.sh {input} >{output} 2>{log.stderr}"
-
+    "src/subtract_germline.sh {input[0]} >{output} 2>{log.stderr}"
 
 rule msi_regions_exons:
   input:
@@ -66,13 +88,14 @@ rule msi_regions_exons:
   shell:
     "grep exon < {input} > {output}"
 
+# find common somatic calls for each caller
 rule common_msi_mutations:
   input:
-    expand("out/{sample}.msi.{caller}.annotated.vcf", sample=config['samples'], caller=config['msi_callers'])
+    expand("out/{tumour}.msi.{{caller}}.annotated.somatic.vcf", tumour=config['tumours'])
   output:
-    "out/msi.common"
+    "out/msi.{caller}.common"
   shell:
-    "python src/find_common_mutations.py --vcfs {input} --threshold 0.1 > {output}"
+    "python src/find_common_mutations.py --vcfs {input} --threshold 2 --position_only > {output}"
 
 # annotates vcf files with vep
 #rule msi_vep:
@@ -102,14 +125,15 @@ rule annotate_msi:
 # add oncogene annotations to msi list
 rule annotate_msi_all_oncogene_regions:
   input:
-    "out/regions.oncogenes.all.bed", # list of oncogene regions 
     "out/regions.msi.oncogenes.bed", # list of msi regions
+    "out/regions.oncogenes.all.bed", # list of oncogene regions 
+    "cfg/msi.seltarbase.bed", # list of seltarbase regions 
   output:
     "out/regions.msi.final.bed" # annotated regions
   log:
     stderr="log/annotate_bed.stderr",
   shell:
-    "src/annotate_bed.py all_oncogene {input[0]} < {input[1]} > {output} 2> {log.stderr}"
+    "src/annotate_bed.py all_oncogene {input[1]} < {input[0]} | src/annotate_bed.py seltarbase {input[2]} > {output} 2> {log.stderr}"
 
 # add oncogene annotations to msi list
 rule annotate_msi_oncogene_regions:

@@ -1,3 +1,6 @@
 cyvcf2
 snakemake
 intervaltree
+numpy
+pandas
+scipy
