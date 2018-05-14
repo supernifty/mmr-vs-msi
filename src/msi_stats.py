@@ -39,6 +39,7 @@ def main(mmr_result, count_result, vcfs):
   # evaluate msi result
   callers = set()
   counts = {}
+  repeat_types = set()
   for idx, filename in enumerate(vcfs):
     logging.info('processing file {} of {}: {}...'.format(idx + 1, len(vcfs), filename))
     # for now just count variants
@@ -75,10 +76,18 @@ def main(mmr_result, count_result, vcfs):
         counts[sample]['medium'] += 1
       else:
         counts[sample]['long'] += 1
+      # repeat type
+      repeat_types.add(variant.INFO['msi_repeat'])
+      repeat_type = 'repeat_type_{}'.format(variant.INFO['msi_repeat'])
+      if repeat_type not in counts[sample]:
+        counts[sample][repeat_type] = 0
+      counts[sample][repeat_type] += 1
+      
     logging.info('{} variants processed.'.format(variant_count + 1))
 
-  sys.stdout.write('Sample\tPatient\tType\tAll\tExon\tOnco\tOncoAll\tOncoExon\tMono\tBi\tTri\tTetra\tShort\tMedium\tLong\tBethesda\t{}\t{}\t{}\n'.format('\t'.join([
-    'total_{}'.format(x) for x in total_callers]), # 
+  sys.stdout.write('Sample\tPatient\tType\tAll\tExon\tOnco\tOncoAll\tOncoExon\tMono\tBi\tTri\tTetra\tShort\tMedium\tLong\tBethesda\t{}\t{}\t{}\t{}\n'.format(
+    '\t'.join(['total_{}'.format(x) for x in total_callers]), # 
+    '\t'.join(['rt_{}'.format(x) for x in sorted(list(repeat_types))]),
     '\t'.join(sorted(list(callers))), 
     '\t'.join(mmr['Sample'][3:])))
   for sample in sorted(counts, key=lambda k: counts[k]['all']): # each sample and its overall count
@@ -88,8 +97,9 @@ def main(mmr_result, count_result, vcfs):
       genes = mmr[sample][3:]
     else:
       sample_type = genes = patient = ''
-    sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(sample, patient, sample_type, counts[sample]['all'], counts[sample]['exon'], counts[sample]['all_oncogene'], counts[sample]['oncogene'], counts[sample]['oncogene_exon'], counts[sample]['repeat_1'], counts[sample]['repeat_2'], counts[sample]['repeat_3'], counts[sample]['repeat_4'], counts[sample]['short'], counts[sample]['medium'], counts[sample]['long'], counts[sample]['bethesda'], 
+    sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(sample, patient, sample_type, counts[sample]['all'], counts[sample]['exon'], counts[sample]['all_oncogene'], counts[sample]['oncogene'], counts[sample]['oncogene_exon'], counts[sample]['repeat_1'], counts[sample]['repeat_2'], counts[sample]['repeat_3'], counts[sample]['repeat_4'], counts[sample]['short'], counts[sample]['medium'], counts[sample]['long'], counts[sample]['bethesda'], 
       '\t'.join([str(totals[sample][x]) for x in range(len(total_callers))]), 
+      '\t'.join([str(counts[sample]['repeat_type_{}'.format(x)]) if 'repeat_type_{}'.format(x) in counts[sample] else '0' for x in sorted(list(repeat_types))]),
       '\t'.join([str(counts[sample][caller]) for caller in sorted(list(callers))]), 
       '\t'.join(genes)))
 

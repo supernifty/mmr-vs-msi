@@ -11,8 +11,9 @@ REMOVE_CHR=True
 import sys
 
 genes = set()
-for line in open(sys.argv[1]):
-  genes.add(line.strip('\n'))
+for gene_list in sys.argv[1:]:
+  for line in open(gene_list):
+    genes.add(line.strip('\n'))
 
 found = set()
 

@@ -72,7 +72,7 @@ def main(show_all, files):
   stain = collections.defaultdict(str)
   for line in open(IHC_METADATA, 'r'):
     fields = line.strip('\n').split('\t')
-    stain[fields[0]] = fields[1]
+    stain[fields[1]] = fields[2] # sample = status
 
   # overall summary
   sys.stdout.write('VariantCount\tNumberOfSamples\n{}'.format('\n'.join([ '{}\t{}'.format(count, stats[count]) for count in sorted(stats)])))
@@ -87,7 +87,7 @@ def main(show_all, files):
   for sample in samples:
     genes = [gene_count['{}|{}'.format(sample, gc)] for gc in sorted(gene_callers)]
     burden = sum(genes)
-    sys.stdout.write('{sample}\t{patient}\t{sample_type}\t{stain}\t{burden}\t{genes}\n'.format(sample=sample, patient=metadata[sample][1], sample_type=to_type(metadata[sample], htsdb[sample]), stain=stain[metadata[sample][1]], burden=burden, genes='\t'.join([str(g) for g in genes])))
+    sys.stdout.write('{sample}\t{patient}\t{sample_type}\t{stain}\t{burden}\t{genes}\n'.format(sample=sample, patient=metadata[sample][1], sample_type=to_type(metadata[sample], htsdb[sample]), stain=stain[sample], burden=burden, genes='\t'.join([str(g) for g in genes])))
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Compare BAMs')
