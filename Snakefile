@@ -4,11 +4,21 @@ configfile: "cfg/config.yaml"
 rule all:
   input:
     "out/msi.summary",
+    "out/msi.summary.mini",
     "out/msi.measure.summary",
-    "out/msi.cluster",
-    "out/msi.dendrogram.png",
+    "out/msi.cluster.tumours",
+    "out/msi.primaries.cluster",
+    "out/msi.blood.cluster",
+    "out/msi.tumours.png",
+    "out/msi.samples.png",
+    expand("out/msi.cluster.{range}.tsv", range=config['indel_length_cluster']),
+    expand("out/msi.cluster.{range}.png", range=config['indel_length_cluster']),
     expand("out/msi.{caller}.common", caller=config['msi_callers']),
     expand("out/mmr.{caller}.common", caller=config['callers']),
+    "out/mmr.cluster.cosmic.png",
+    "out/mmr.cluster.mmr.png",
+    "out/mmr.cluster.cancertype.png",
+    "out/regions.msi.stats"
 
 ##### msi #####
 include: 'Snakefile.msi'

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 '''
-  counts variants in provided vcf files
+  counts variants in provided vcf files and merges with mmr results
 '''
 
+import argparse
 import logging
 import os
 import sys
@@ -52,8 +53,14 @@ def main(mmr_result, count_result, vcfs):
     if caller not in counts[sample]:
       counts[sample][caller] = 0
 
-    variant_count = 0
+    variant_count = skipped = 0
+    locations_seen = set()
     for variant_count, variant in enumerate(cyvcf2.VCF(filename)):
+      location = '{}/{}'.format(variant.CHROM, variant.POS)
+      if location in locations_seen:
+        skipped += 1
+        continue # don't double count variants at same location
+      locations_seen.add(location)
       counts[sample]['all'] += 1 # all variants for this sample across all callers
       counts[sample][caller] += 1 # all variants for this sample and caller -> total_{caller}
       # check other variant categories from INFO msi_repeat=T;msi_length=15
@@ -83,7 +90,7 @@ def main(mmr_result, count_result, vcfs):
         counts[sample][repeat_type] = 0
       counts[sample][repeat_type] += 1
       
-    logging.info('{} variants processed.'.format(variant_count + 1))
+    logging.info('{} variants processed. skipped {} repeats'.format(variant_count + 1, skipped))
 
   sys.stdout.write('Sample\tPatient\tType\tAll\tExon\tOnco\tOncoAll\tOncoExon\tMono\tBi\tTri\tTetra\tShort\tMedium\tLong\tBethesda\t{}\t{}\t{}\t{}\n'.format(
     '\t'.join(['total_{}'.format(x) for x in total_callers]), # 
@@ -106,5 +113,15 @@ def main(mmr_result, count_result, vcfs):
   logging.info('done')
   
 if __name__ == '__main__':
-  logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
-  main(sys.argv[1], sys.argv[2], sys.argv[3:])
+  parser = argparse.ArgumentParser(description='Assess MSI')
+  parser.add_argument('--mmr', required='true', help='mmr results')
+  parser.add_argument('--counts', required='true', help='overall counts')
+  parser.add_argument('--vcfs', required='true', nargs='+', help='vcf files')
+  parser.add_argument('--verbose', action='store_true', help='more logging')
+  args = parser.parse_args()
+  if args.verbose:
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
+  else:
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+
+  main(args.mmr, args.counts, args.vcfs)

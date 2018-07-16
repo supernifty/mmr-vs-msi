@@ -1,5 +1,38 @@
 
 ##### mmr #####
+rule mmr_cluster_cosmic:
+  input:
+    summary="out/mmr.summary",
+    genes=config["genes_cosmic"]
+  output:
+    "out/mmr.cluster.cosmic.png"
+  log:
+    stderr="log/mmr.cluster.cosmic.stderr"
+  shell:
+    "src/cluster_mmr.py --image {output} --genes {input.genes} <{input.summary} 2>{log.stderr}"
+
+rule mmr_cluster_mmr:
+  input:
+    summary="out/mmr.summary",
+    genes=config["genes_mmr"]
+  output:
+    "out/mmr.cluster.mmr.png"
+  log:
+    stderr="log/mmr.cluster.mmr.stderr"
+  shell:
+    "src/cluster_mmr.py --image {output} --genes {input.genes} <{input.summary} 2>{log.stderr}"
+
+rule mmr_cluster_cancertype:
+  input:
+    summary="out/mmr.summary",
+    genes="out/oncogenes.msi"
+  output:
+    "out/mmr.cluster.cancertype.png"
+  log:
+    stderr="log/mmr.cluster.cancertype.stderr"
+  shell:
+    "src/cluster_mmr.py --image {output} --genes {input.genes} <{input.summary} 2>{log.stderr}"
+
 
 # mmr analysis output is a list of candidates likely to be dMMR
 rule mmr_stats:
@@ -45,18 +78,6 @@ rule common_mmr_mutations:
   shell:
     "src/find_common_mutations.py --vcfs {input} --threshold 2 --position_only > {output}"
 
-# mmr analysis output is a list of candidates likely to be dMMR
-#rule mmr_stats:
-#  input:
-#    expand("out/{sample}.mmr.{caller}.filter.vcf", sample=config['samples'], caller=config['callers']),
-#    expand("out/{sample}.mmr.hmmcopy.filter.bed", sample=config['samples'])
-#  output:
-#    "out/mmr.summary"
-#  log:
-#    stderr="log/mmr.summary.stderr",
-#  shell:
-#    "src/mmr_stats.py --all --verbose {input} 1>{output} 2>{log.stderr}"
-
 # applies filtering to the annotated vcf files
 rule mmr_filter:
   input:
@@ -95,12 +116,12 @@ rule hmmcopy_filter:
 # generates bed regions to filter vcfs on based on the provided genes, and refseq exons
 rule make_mmr_regions:
   input: 
-    config["genes_mmr"],
-    config["refseq"],
-    config["genome_lengths"]
+    genes=[config["genes_mmr"], config["genes_cosmic"]],
+    refseq=config["refseq"],
+    lengths=config["genome_lengths"]
   output:
     "out/regions.mmr.bed"
   shell:
     "module load bedtools-intel/2.27.1; "
-    "src/make_bed.py {input[0]} < {input[1]} | sort -k1,1 -k2,2n | bedtools merge -i - -c 4 -o distinct | bedtools slop -b {config[slop]} -i - -g {input[2]} > {output}"
+    "src/make_bed.py {input.genes} < {input.refseq} | sort -k1,1 -k2,2n | bedtools merge -i - -c 4 -o distinct | bedtools slop -b {config[slop]} -i - -g {input.lengths} > {output}"
 

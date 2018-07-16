@@ -41,6 +41,9 @@ In reference:
 * genome.fa
 * refseq
 
+## Dependencies
+* pindel
+
 ## Running
 First time:
 ```
@@ -54,6 +57,16 @@ run.sh # kicks off the snakemake script
 
 ## Implementation
 * Snakefile contains the main pipelinee
+
+## Outputs
+* msi.cluster.tumours: for each exonic MS loci, which tumour samples have indel mutations?
+* msi.sample.cluster: for each exonic MS loci, which samples have indel mutations?
+* msi.summary: MMR status, MSI context info, and MSI mutation summary.
+* msi.cluster.?.tsv: loci mutations for different ranges.
+
+* msi.samples.?.png: clustering based on the mutated MS loci in msi.sample.cluster
+* msi.cluster.?.png: clustering bsaed on mutated loci but only considering indels of particular length
+* msi.tumours.?.png: clustering based on msi.cluster.tumours
 
 ## TODO/Ideas
 * gridss breakends are doubled if they are both within the gene (e.g. deletion)

@@ -16,6 +16,9 @@ def main(fh, sample1, sample2, out):
     s1idx.append(header.index(sample))
   s2idx = []
   for sample in sample2:
+    if sample in sample1:
+      logging.debug('skipping %s in sample2', sample)
+      continue
     s2idx.append(header.index(sample))
 
   sys.stdout.write('Cat\t{}\t{}\t{}\n'.format(sample1[0], sample2[0], '\t'.join(header[0:6])))

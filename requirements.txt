@@ -4,3 +4,4 @@ intervaltree
 numpy
 pandas
 scipy
+sklearn

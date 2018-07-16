@@ -21,7 +21,7 @@ def count_as_str(count):
 def net(count):
   return sum([x * count[x] for x in count])
 
-def main(regions, tumour_vcf, normal_vcf, screen, summary):
+def main(regions, tumour_vcfs, normal_vcf, screen, summary, metadata):
   logging.info('starting...')
 
   logging.debug('reading %s...', regions)
@@ -49,18 +49,18 @@ def main(regions, tumour_vcf, normal_vcf, screen, summary):
           interval.data['normal'][indel_len] += 1
   logging.debug('%s: done reading %i variants, %i added', normal_vcf, count + 1, added)
 
-  logging.debug('reading %s...', tumour_vcf)
-  count = 0
-  added = 0
-  for count, variant in enumerate(cyvcf2.VCF(tumour_vcf)):
-    indel_len = len(variant.ALT[0]) - len(variant.REF)
-    if indel_len != 0:
-      if variant.CHROM in intervals:
-        for interval in intervals[variant.CHROM][variant.POS]:
-          interval.data['tumour'][indel_len] += 1
-          added += 1
-  logging.debug('%s: done reading %i variants, %i added', tumour_vcf, count + 1, added)
-  
+  for tumour_vcf in tumour_vcfs:
+    logging.debug('reading %s...', tumour_vcf)
+    count = 0
+    added = 0
+    for count, variant in enumerate(cyvcf2.VCF(tumour_vcf)):
+      indel_len = len(variant.ALT[0]) - len(variant.REF)
+      if indel_len != 0:
+        if variant.CHROM in intervals:
+          for interval in intervals[variant.CHROM][variant.POS]:
+            interval.data['tumour'][indel_len] += 1
+            added += 1
+    logging.debug('%s: done reading %i variants, %i added', tumour_vcf, count + 1, added)
   
   logging.debug('finding differences...')
   same = 0
@@ -84,8 +84,8 @@ def main(regions, tumour_vcf, normal_vcf, screen, summary):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Assess MSI')
-  parser.add_argument('--tumour', required=True, help='tumour vcf')
-  parser.add_argument('--normal', required=True, help='normal vcf')
+  parser.add_argument('--metadata', required=True, help='metadata file')
+  parser.add_argument('--tumours', required=True, nargs='+', help='tumour vcf')
   parser.add_argument('--screen', required=False, help='screen to filter common mutations')
   parser.add_argument('--regions', required=True, help='msi regions')
   parser.add_argument('--verbose', action='store_true', help='more logging')
@@ -96,4 +96,4 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.regions, args.tumour, args.normal, args.screen, args.summary)
+  main(args.regions, args.tumours, args.normal, args.screen, args.summary, args.metadata)

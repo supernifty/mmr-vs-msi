@@ -8,11 +8,19 @@ cancer_type: 'prostate'
 slop: 1000
 callers: [
   'varscan',
-  'varscan_indel',
+  'pindel',
   'gridss'
 ]
 msi_callers: [
   'pindel'
+]
+indel_length_cluster: [
+  '-100000,-6',
+  '-5,-1',
+  '-1,0',
+  '0,1',
+  '1,5',
+  '6,100000'
 ]
 samples: [
   SAMPLES

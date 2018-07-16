@@ -2,7 +2,7 @@
     "__default__":
     {
         "account": "UOM0040",
-        "time": "00:15:00",
+        "time": "00:30:00",
         "n": 1,
         "partition": "main",
         "memory": 1024
@@ -26,11 +26,58 @@
         "memory": 1024
     },
 
+    "mmr_vep":
+    {
+        "time": "08:00:00",
+        "n": 4,
+        "memory": 16384
+    },
+
+    "msi_cluster_samples_vis":
+    {
+        "memory": 16384
+    },
+
+    "msi_cluster_vis":
+    {
+        "memory": 8192
+    },
+
     "msi_vep":
     {
         "time": "24:00:00",
         "n": 4,
         "memory": 32768
+    },
+
+    "msi_cluster_primaries":
+    {
+        "time": "04:00:00",
+        "memory": 1024
+    },
+
+    "msi_cluster_samples":
+    {
+        "time": "06:00:00",
+        "memory": 1024
+    },
+
+    "msi_cluster_range":
+    {
+        "time": "04:00:00",
+        "memory": 1024
+    },
+
+    "msi_cluster_tumours":
+    {
+        "time": "04:00:00",
+        "memory": 1024
+    },
+
+    "msi_cluster_blood":
+    {
+        "time": "04:00:00",
+        "memory": 1024
     },
 
     "msi_assess":
@@ -41,7 +88,7 @@
 
     "annotate_msi":
     {
-        "time": "01:00:00",
-        "memory": 4096
+        "time": "02:00:00",
+        "memory": 8192
     }
 }

@@ -12,17 +12,27 @@
 #  shell:
 #    "src/msi_stats.py {input} 1>{output} 2>{log.stderr}"
 
+# summary of both mmr and msi
+rule msi_mini:
+  input:
+    genes=config["genes_mmr"],
+    summary="out/msi.summary"
+  output:
+    "out/msi.summary.mini"
+  shell:
+    "src/just_mmr.py {input.genes} < {input.summary} > {output}"
+
 rule msi_assess:
   input:
-    "out/mmr.summary",
-    "out/mutations.summary",
-    expand("out/{tumour}.msi.{caller}.annotated.somatic.vcf", tumour=config['tumours'], caller=config['msi_callers'])
+    mmr="out/mmr.summary",
+    counts="out/mutations.summary",
+    vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.vcf", tumour=config['tumours'], caller=config['msi_callers'])
   output:
     "out/msi.summary"
   log:
     stderr="log/msi.summary.stderr",
   shell:
-    "src/msi_stats.py {input} 1>{output} 2>{log.stderr}"
+    "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} 1>{output} 2>{log.stderr}"
 
 rule msi_measure_summary:
   input:
@@ -32,41 +42,93 @@ rule msi_measure_summary:
   shell:
     "cat {input} > {output}"
 
+# clustering
 rule msi_cluster_vis:
   input:
-    "out/msi.cluster",
+    "out/msi.cluster.tumours",
     "cfg/htsdb.csv"
   output:
-    "out/msi.dendrogram.png"
+    "out/msi.tumours.png"
   log:
     stderr="log/msi_cluster_vis.stderr",
   shell:
     "src/cluster_msi.py --image {output} --verbose --categories {input[1]} <{input[0]} 2>{log.stderr}"
 
-rule msi_cluster_all:
+rule msi_cluster_vis_range:
+  input:
+    "out/msi.cluster.{range}.tsv",
+    "cfg/htsdb.csv"
+  output:
+    "out/msi.cluster.{range}.png"
+  log:
+    stderr="log/msi_cluster_vis_{range}.stderr",
+  shell:
+    "src/cluster_msi.py --image {output} --verbose --categories {input[1]} <{input[0]} 2>{log.stderr}"
+
+rule msi_cluster_primaries:
+  input:
+    bed="out/regions.msi.final.exons.bed",
+    categories="cfg/htsdb.csv",
+    vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.vcf", tumour=config['tumours'], caller=config['msi_callers']),
+  output:
+    "out/msi.primaries.cluster"
+  log:
+    stderr="log/msi.cluster.stderr",
+  shell:
+    "src/count_mutations_by_region.py --bed {input.bed} --vcf {input.vcfs} --use_lengths --categories {input.categories} --category Primary >{output} 2>{log.stderr}"
+
+rule msi_cluster_blood:
+  input:
+    bed="out/regions.msi.final.exons.bed",
+    categories="cfg/htsdb.csv",
+    vcfs=expand("out/{sample}.msi.{caller}.annotated.vcf", sample=config['samples'], caller=config['msi_callers']),
+  output:
+    "out/msi.blood.cluster"
+  log:
+    stderr="log/msi.blood.cluster.stderr",
+  shell:
+    "src/count_mutations_by_region.py --verbose --bed {input.bed} --vcf {input.vcfs} --use_lengths --categories {input.categories} --category 'Whole-blood' >{output} 2>{log.stderr}"
+
+rule msi_cluster_tumours:
   input:
     bed="out/regions.msi.final.exons.bed",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.vcf", tumour=config['tumours'], caller=config['msi_callers']),
   output:
-    "out/msi.cluster"
+    "out/msi.cluster.tumours"
   log:
     stderr="log/msi.cluster.stderr",
   shell:
-    "src/count_mutations_by_region.py --bed {input.bed} --vcf {input.vcfs} >{output} 2>{log.stderr}"
+    "src/count_mutations_by_region.py --bed {input.bed} --vcf {input.vcfs} --use_lengths >{output} 2>{log.stderr}"
+
+rule msi_cluster_range:
+  input:
+    bed="out/regions.msi.final.exons.bed",
+    vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.vcf", tumour=config['tumours'], caller=config['msi_callers']),
+  output:
+    "out/msi.cluster.{range}.tsv"
+  log:
+    stderr="log/msi.cluster.{range}.stderr"
+  params:
+    start=lambda wildcards: wildcards.range.split(',')[0],
+    finish=lambda wildcards: wildcards.range.split(',')[1]
+  shell:
+    "src/count_mutations_by_region.py --bed {input.bed} --vcf {input.vcfs} --use_lengths --minlength {params.start} --maxlength {params.finish} --minsamples 1 >{output} 2>{log.stderr}"
 
 # tumour specific analysis
 # note that we use the vcf before germline has been subtracted out
 rule msi_measure:
   input:
-    "out/regions.msi.final.exons.bed", # exons only for now
-    expand("out/{{tumour}}.msi.{caller}.annotated.vcf", caller=config['msi_callers']) # TODO multiple callers not supported (yet?)
+    regions="out/regions.msi.final.exons.bed", # exons only for now
+    vcfs=expand("out/{{tumour}}.msi.{caller}.annotated.vcf", caller=config['msi_callers']), # TODO multiple callers not supported (yet?)
+    metadata="cfg/sample-metadata.csv"
   output:
-    "out/{tumour}.msi_measure_detail",
-    "out/{tumour}.msi_measure_summary"
+    detail="out/{tumour}.msi_measure_detail",
+    summary="out/{tumour}.msi_measure_summary"
   log:
     stderr="log/msi_measure.{tumour}.stderr",
   shell:
-    "src/msi_measure.sh {input} {output[1]} >{output[0]} 2>{log.stderr}"
+    #"src/msi_measure.sh {input} {output[1]} >{output[0]} 2>{log.stderr}"
+    "src/msi_measure.py --metadata {input.metadata}--verbose --regions {input.regions} --tumours {input.vcfs} --summary {output.summary} >{output.detail} 2>{log.stderr}"
 
 # tumour specific - remove germline calls
 rule filter_somatic_msi:
@@ -109,6 +171,32 @@ rule common_msi_mutations:
 #    stdout="log/msi.vep.{sample}.{caller}.stdout"
 #  shell:
 #    "src/annotate.sh {config[genome]} {input} {output} 1>{log.stdout} 2>{log.stderr}"
+
+rule msi_cluster_samples_vis:
+  input:
+    "out/msi.samples.cluster",
+    "cfg/htsdb.csv"
+  output:
+    "out/msi.samples.png"
+  log:
+    stderr="log/msi_samples_cluster_vis.stderr",
+  shell:
+    "src/cluster_msi.py --image {output} --verbose --categories {input[1]} <{input[0]} 2>{log.stderr}"
+
+
+# cluster msi on all samples (not just tumour)
+rule msi_cluster_samples:
+  input:
+    bed="out/regions.msi.final.exons.bed",
+    categories="cfg/htsdb.csv",
+    vcfs=expand("out/{sample}.msi.{caller}.annotated.vcf", sample=config['samples'], caller=config['msi_callers']),
+  output:
+    "out/msi.samples.cluster"
+  log:
+    stderr="log/msi.cluster.samples.stderr",
+  shell:
+    "src/count_mutations_by_region.py --bed {input.bed} --vcf {input.vcfs} --use_lengths --categories {input.categories} >{output} 2>{log.stderr}"
+
 
 # msi output is list of samples and the degree of MSI found
 rule annotate_msi:
@@ -188,6 +276,17 @@ rule make_msi_oncogenes:
   shell:
     "cut -f1,8,9,10,11 < {input} | grep -i {config[cancer_type]} | cut -f1 | sort > {output}"
 
+# basic msi stats
+rule bed_stats:
+  input:
+    "out/regions.msi.bed"
+  output:
+    "out/regions.msi.stats"
+  log:
+    stderr="log/bed_stats.log"
+  shell:
+    "src/bed_stats.py <{input} 1>{output} 2>{log.stderr}"
+
 # limits msi regions by length and repeat type
 rule make_msi_regions:
   input:
@@ -197,6 +296,6 @@ rule make_msi_regions:
   log:
     stderr="log/make_msi_regions.stderr",
   shell:
-    "src/filter_msi.py --minlen 10 --maxlen 100000 --minrepeat 1 --maxrepeat 4 < {input} 1>{output} 2>{log.stderr}"
+    "src/filter_msi.py --exons_only --minlen 8 --maxlen 100000 --minrepeat 1 --maxrepeat 4 < {input} 1>{output} 2>{log.stderr}"
 
 

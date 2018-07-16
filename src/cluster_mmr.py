@@ -21,26 +21,37 @@ import sklearn.decomposition
 import sklearn.manifold
 import sklearn.metrics
 
-def main(fh, target):
+def main(fh, target, genes_fn):
   logging.info('reading cluster results from stdin...')
+
+  genes = set()
+  for line in open(genes_fn, 'r'):
+    genes.add(line.strip())
+  logging.info('%i genes', len(genes))
 
   X = []
   ys = []
   cs = []
   cats = set()
   first = True
+  included_genes = set()
   for line in fh:
     fields = line.strip('\n').split('\t')
     if len(fields) < 6:
       continue
     if first:
       first = False
+      for idx in range(len(fields)):
+        if '|' in fields[idx]:
+          gene, caller = fields[idx].split('|')
+          if gene in genes:
+            included_genes.add(idx)
       continue
     # Sample  Patient SampleType      MSH2Stain       Burden  A1CF|gridss ...
     ys.append(fields[0])
     cs.append(fields[2])
     cats.add(fields[2])
-    X.append(fields[5:])
+    X.append([fields[idx] for idx in included_genes])
 
   y_all = ['{} {}'.format(ys[i], cs[i]) for i in range(len(ys))]
 
@@ -131,10 +142,11 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Cluster MSI')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   parser.add_argument('--image', default='dend.png', help='dend file')
+  parser.add_argument('--genes', help='genes filter')
   args = parser.parse_args()
   if args.verbose:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(sys.stdin, args.image)
+  main(sys.stdin, args.image, args.genes)
