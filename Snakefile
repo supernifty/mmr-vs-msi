@@ -18,7 +18,11 @@ rule all:
     "out/mmr.cluster.cosmic.png",
     "out/mmr.cluster.mmr.png",
     "out/mmr.cluster.cancertype.png",
-    "out/regions.msi.stats"
+    "out/regions.msi.stats",
+    "out/msi.repeat_context.all.heatmap.png",
+    "out/msi.indel_context.all.heatmap.png",
+    "out/msi.repeat_indel_context.all.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.heatmap.png"
 
 ##### msi #####
 include: 'Snakefile.msi'

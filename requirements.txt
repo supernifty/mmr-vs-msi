@@ -4,4 +4,6 @@ intervaltree
 numpy
 pandas
 scipy
+seaborn
 sklearn
+fastcluster

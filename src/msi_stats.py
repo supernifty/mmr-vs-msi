@@ -10,7 +10,19 @@ import sys
 
 import cyvcf2
 
-def main(mmr_result, count_result, vcfs):
+def rotate_repeat(r):
+  '''
+    normalize repeats to start from earliest base e.g. GCAA -> AAGC
+  '''
+  best = 0
+  for idx, el in enumerate(r):
+    if r[idx] < r[best]:
+      best = idx
+
+  return r[best:] + r[:best]
+
+
+def main(mmr_result, count_result, vcfs, rotate_context):
   logging.info('{} vcfs to process...'.format(len(vcfs)))
   # pull in mmr result
   #Sample  Patient SampleType      Genes
@@ -41,7 +53,9 @@ def main(mmr_result, count_result, vcfs):
   callers = set()
   counts = {}
   repeat_types = set()
-  for idx, filename in enumerate(vcfs):
+  indel_lens = set()
+  repeat_indels = set()
+  for idx, filename in enumerate(vcfs): # each vcf
     logging.info('processing file {} of {}: {}...'.format(idx + 1, len(vcfs), filename))
     # for now just count variants
     sample = os.path.basename(filename).split('.')[0] # e.g. CMHS1
@@ -55,7 +69,7 @@ def main(mmr_result, count_result, vcfs):
 
     variant_count = skipped = 0
     locations_seen = set()
-    for variant_count, variant in enumerate(cyvcf2.VCF(filename)):
+    for variant_count, variant in enumerate(cyvcf2.VCF(filename)): # each variant
       location = '{}/{}'.format(variant.CHROM, variant.POS)
       if location in locations_seen:
         skipped += 1
@@ -63,6 +77,12 @@ def main(mmr_result, count_result, vcfs):
       locations_seen.add(location)
       counts[sample]['all'] += 1 # all variants for this sample across all callers
       counts[sample][caller] += 1 # all variants for this sample and caller -> total_{caller}
+      indel_len = len(variant.ALT[0]) - len(variant.REF)
+      indel_lens.add(indel_len)
+      il = 'il_{}'.format(indel_len)
+      if il not in counts[sample]:
+        counts[sample][il] = 0
+      counts[sample][il] += 1
       # check other variant categories from INFO msi_repeat=T;msi_length=15
       if variant.INFO.get('msi_exon') is not None:
         counts[sample]['exon'] += 1
@@ -84,17 +104,30 @@ def main(mmr_result, count_result, vcfs):
       else:
         counts[sample]['long'] += 1
       # repeat type
-      repeat_types.add(variant.INFO['msi_repeat'])
-      repeat_type = 'repeat_type_{}'.format(variant.INFO['msi_repeat'])
-      if repeat_type not in counts[sample]:
-        counts[sample][repeat_type] = 0
-      counts[sample][repeat_type] += 1
-      
+      if rotate_context:
+        repeat_type = rotate_repeat(variant.INFO['msi_repeat'])
+      else:
+        repeat_type = variant.INFO['msi_repeat']
+      repeat_types.add(repeat_type)
+      rt = 'repeat_type_{}'.format(repeat_type)
+      if rt not in counts[sample]:
+        counts[sample][rt] = 0
+      counts[sample][rt] += 1
+      # repeat type and indel len
+      repeat_indel = '{}{}'.format(repeat_type, indel_len)
+      repeat_indels.add(repeat_indel)
+      rtil = 'rtil_{}'.format(repeat_indel)
+      if rtil not in counts[sample]:
+        counts[sample][rtil] = 0
+      counts[sample][rtil] += 1
+
     logging.info('{} variants processed. skipped {} repeats'.format(variant_count + 1, skipped))
 
-  sys.stdout.write('Sample\tPatient\tType\tAll\tExon\tOnco\tOncoAll\tOncoExon\tMono\tBi\tTri\tTetra\tShort\tMedium\tLong\tBethesda\t{}\t{}\t{}\t{}\n'.format(
+  sys.stdout.write('Sample\tPatient\tType\tAll\tExon\tOnco\tOncoAll\tOncoExon\tMono\tBi\tTri\tTetra\tShort\tMedium\tLong\tBethesda\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
     '\t'.join(['total_{}'.format(x) for x in total_callers]), # 
     '\t'.join(['rt_{}'.format(x) for x in sorted(list(repeat_types))]),
+    '\t'.join(['il_{}'.format(x) for x in sorted(list(indel_lens))]),
+    '\t'.join(['rtil_{}'.format(x) for x in sorted(list(repeat_indels))]),
     '\t'.join(sorted(list(callers))), 
     '\t'.join(mmr['Sample'][3:])))
   for sample in sorted(counts, key=lambda k: counts[k]['all']): # each sample and its overall count
@@ -104,9 +137,11 @@ def main(mmr_result, count_result, vcfs):
       genes = mmr[sample][3:]
     else:
       sample_type = genes = patient = ''
-    sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(sample, patient, sample_type, counts[sample]['all'], counts[sample]['exon'], counts[sample]['all_oncogene'], counts[sample]['oncogene'], counts[sample]['oncogene_exon'], counts[sample]['repeat_1'], counts[sample]['repeat_2'], counts[sample]['repeat_3'], counts[sample]['repeat_4'], counts[sample]['short'], counts[sample]['medium'], counts[sample]['long'], counts[sample]['bethesda'], 
+    sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(sample, patient, sample_type, counts[sample]['all'], counts[sample]['exon'], counts[sample]['all_oncogene'], counts[sample]['oncogene'], counts[sample]['oncogene_exon'], counts[sample]['repeat_1'], counts[sample]['repeat_2'], counts[sample]['repeat_3'], counts[sample]['repeat_4'], counts[sample]['short'], counts[sample]['medium'], counts[sample]['long'], counts[sample]['bethesda'], 
       '\t'.join([str(totals[sample][x]) for x in range(len(total_callers))]), 
       '\t'.join([str(counts[sample]['repeat_type_{}'.format(x)]) if 'repeat_type_{}'.format(x) in counts[sample] else '0' for x in sorted(list(repeat_types))]),
+      '\t'.join([str(counts[sample]['il_{}'.format(x)]) if 'il_{}'.format(x) in counts[sample] else '0' for x in sorted(list(indel_lens))]),
+      '\t'.join([str(counts[sample]['rtil_{}'.format(x)]) if 'rtil_{}'.format(x) in counts[sample] else '0' for x in sorted(list(repeat_indels))]),
       '\t'.join([str(counts[sample][caller]) for caller in sorted(list(callers))]), 
       '\t'.join(genes)))
 
@@ -118,10 +153,11 @@ if __name__ == '__main__':
   parser.add_argument('--counts', required='true', help='overall counts')
   parser.add_argument('--vcfs', required='true', nargs='+', help='vcf files')
   parser.add_argument('--verbose', action='store_true', help='more logging')
+  parser.add_argument('--rotate_context', action='store_true', help='rotate contexts')
   args = parser.parse_args()
   if args.verbose:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.mmr, args.counts, args.vcfs)
+  main(args.mmr, args.counts, args.vcfs, args.rotate_context)
