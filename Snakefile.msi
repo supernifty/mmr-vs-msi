@@ -141,6 +141,21 @@ rule msi_repeat_context_vis:
     "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --max_len 4 --threshold 0.1 --rotate_context < {input} 2>>{log.stderr}; "
     "done)"
 
+rule msi_repeat_context_emast_vis:
+  input:
+    "out/msi.summary"
+  output:
+    "out/msi.repeat_context_emast.all.heatmap.png"
+  log:
+    stderr="log/msi.repeat_context_emast_vis.stderr"
+  shell:
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --min_len 4 --rotate_context --threshold 0.05 < {input} 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --min_len 4 --rotate_context --threshold 0.05 < {input} 2>>{log.stderr}; "
+    "done)"
+
 rule msi_indel_context_vis:
   input:
     "out/msi.summary"

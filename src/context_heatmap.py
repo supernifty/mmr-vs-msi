@@ -35,7 +35,7 @@ def rotate_repeat(r):
 
   return r[best:] + r[:best]
 
-def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=False, min_len=0, max_len=3, highlight=None, normalize_custom=None, threshold_proportion=0, rotate_context=False):
+def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=False, min_len=0, max_len=1000, highlight=None, normalize_custom=None, threshold_proportion=0, rotate_context=False):
   logging.info('reading from stdin...')
   header = None
   df = None
@@ -49,7 +49,7 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
       header = fields
       for idx in range(len(fields)):
         if fields[idx].startswith(prefix):
-          if len(prefix) + min_len <= len(fields[idx]) <= len(prefix) + max_len:
+          if (len(prefix) + min_len) <= len(fields[idx]) <= (len(prefix) + max_len):
             features.append(idx)
             feature_name = fields[idx][len(prefix):]
             input_feature_names.append(feature_name)
@@ -59,6 +59,8 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
                 final_feature_names.append(feature_name)
             else:
               final_feature_names.append(feature_name)
+          else:
+            logging.debug('skipping feature %s due to length', fields[idx])
       #features = features[:10]
       df = pd.DataFrame(columns=['sample'] + final_feature_names)
       #df.columns.name = 'context'
@@ -135,6 +137,9 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
   if df.shape[1] < 2:
     logging.warn('not enough samples. exiting')
     sys.exit(0)
+  if df.shape[0] < 1:
+    logging.warn('not enough features. exiting')
+    sys.exit(0)
 
   logging.info('plotting...')
   plot = sns.clustermap(df, figsize=(max(8, df.shape[1] / 10), max(8, df.shape[0] / 10)))
@@ -152,7 +157,7 @@ if __name__ == '__main__':
   parser.add_argument('--log', action='store_true', help='apply log to counts')
   parser.add_argument('--prefix', required=False, default='rt_', help='feature prefix')
   parser.add_argument('--min_len', required=False, default=0, type=int, help='feature prefix')
-  parser.add_argument('--max_len', required=False, default=3, type=int, help='feature prefix')
+  parser.add_argument('--max_len', required=False, default=1000, type=int, help='feature prefix')
   parser.add_argument('--highlight', required=False, nargs='+', help='samples to highlight')
   parser.add_argument('--threshold', required=False, default=0, type=float, help='minimum mutation count as a proportion of sample count')
   parser.add_argument('--rotate_context', action='store_true', help='rotate contexts')

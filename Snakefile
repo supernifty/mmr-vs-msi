@@ -22,7 +22,8 @@ rule all:
     "out/msi.repeat_context.all.heatmap.png",
     "out/msi.indel_context.all.heatmap.png",
     "out/msi.repeat_indel_context.all.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.heatmap.png"
+    "out/msi.repeat_indel_context_rotated.all.heatmap.png",
+    "out/msi.repeat_context_emast.all.heatmap.png"
 
 ##### msi #####
 include: 'Snakefile.msi'
