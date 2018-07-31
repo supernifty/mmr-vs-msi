@@ -21,8 +21,24 @@ def rotate_repeat(r):
 
   return r[best:] + r[:best]
 
+RC = {'a': 't', 'c': 'g', 't': 'a', 'g': 'c', 'n': 'n', 'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C', 'N': 'N'}
+def reverse_complement(repeat):
+  return ''.join([RC[x] for x in repeat][::-1])
+  
+def transcribe_strand(repeat, exon, stats):
+  # ZKSCAN3_exon_5_0_chr6_28333203_f[28333202:28336954],ZKSCAN3...
+  fr = exon.split(',')[0].split('_')[-1][0]
+  if fr == 'r':
+    stats['strand_r'] += 1
+    return reverse_complement(repeat)
+  elif fr == 'f':
+    stats['strand_f'] += 1
+    return repeat
+  else:
+    logging.warn('unable to determine strand for exon: %s', exon)
+    return repeat
 
-def main(mmr_result, count_result, vcfs, rotate_context):
+def main(mmr_result, count_result, vcfs, rotate_context, transcribed_strand):
   logging.info('{} vcfs to process...'.format(len(vcfs)))
   # pull in mmr result
   #Sample  Patient SampleType      Genes
@@ -67,22 +83,27 @@ def main(mmr_result, count_result, vcfs, rotate_context):
     if caller not in counts[sample]:
       counts[sample][caller] = 0
 
-    variant_count = skipped = 0
+    stats = {'variant_count': 0, 'skipped': 0, 'strand_f': 0, 'strand_r': 0}
+
     locations_seen = set()
-    for variant_count, variant in enumerate(cyvcf2.VCF(filename)): # each variant
+    for stats['variant_count'], variant in enumerate(cyvcf2.VCF(filename)): # each variant
+      indel_len = len(variant.ALT[0]) - len(variant.REF)
+      if indel_len == 0: # not an indel
+        continue
+
       location = '{}/{}'.format(variant.CHROM, variant.POS)
       if location in locations_seen:
-        skipped += 1
+        stats['skipped'] += 1
         continue # don't double count variants at same location
       locations_seen.add(location)
       counts[sample]['all'] += 1 # all variants for this sample across all callers
       counts[sample][caller] += 1 # all variants for this sample and caller -> total_{caller}
-      indel_len = len(variant.ALT[0]) - len(variant.REF)
       indel_lens.add(indel_len)
       il = 'il_{}'.format(indel_len)
       if il not in counts[sample]:
         counts[sample][il] = 0
       counts[sample][il] += 1
+
       # check other variant categories from INFO msi_repeat=T;msi_length=15
       if variant.INFO.get('msi_exon') is not None:
         counts[sample]['exon'] += 1
@@ -94,6 +115,7 @@ def main(mmr_result, count_result, vcfs, rotate_context):
           counts[sample]['oncogene_exon'] += 1
       if variant.INFO.get('msi_all_oncogene') is not None:
         counts[sample]['all_oncogene'] += 1
+
       repeat_length = len(variant.INFO['msi_repeat'])
       counts[sample]['repeat_{}'.format(repeat_length)] += 1
       ms_length = int(variant.INFO['msi_length'])
@@ -103,16 +125,23 @@ def main(mmr_result, count_result, vcfs, rotate_context):
         counts[sample]['medium'] += 1
       else:
         counts[sample]['long'] += 1
+
       # repeat type
       if rotate_context:
         repeat_type = rotate_repeat(variant.INFO['msi_repeat'])
       else:
         repeat_type = variant.INFO['msi_repeat']
+
+      # transcribed strand
+      if transcribed_strand and variant.INFO.get('msi_exon') is not None:
+        repeat_type = transcribe_strand(repeat_type, variant.INFO.get('msi_exon'), stats)
+
       repeat_types.add(repeat_type)
       rt = 'repeat_type_{}'.format(repeat_type)
       if rt not in counts[sample]:
         counts[sample][rt] = 0
       counts[sample][rt] += 1
+
       # repeat type and indel len
       repeat_indel = '{}{}'.format(repeat_type, indel_len)
       repeat_indels.add(repeat_indel)
@@ -121,7 +150,7 @@ def main(mmr_result, count_result, vcfs, rotate_context):
         counts[sample][rtil] = 0
       counts[sample][rtil] += 1
 
-    logging.info('{} variants processed. skipped {} repeats'.format(variant_count + 1, skipped))
+    logging.info(', '.join(['{}: {}'.format(k, stats[k]) for k in stats]))
 
   sys.stdout.write('Sample\tPatient\tType\tAll\tExon\tOnco\tOncoAll\tOncoExon\tMono\tBi\tTri\tTetra\tShort\tMedium\tLong\tBethesda\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
     '\t'.join(['total_{}'.format(x) for x in total_callers]), # 
@@ -137,7 +166,7 @@ def main(mmr_result, count_result, vcfs, rotate_context):
       genes = mmr[sample][3:]
     else:
       sample_type = genes = patient = ''
-    sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(sample, patient, sample_type, counts[sample]['all'], counts[sample]['exon'], counts[sample]['all_oncogene'], counts[sample]['oncogene'], counts[sample]['oncogene_exon'], counts[sample]['repeat_1'], counts[sample]['repeat_2'], counts[sample]['repeat_3'], counts[sample]['repeat_4'], counts[sample]['short'], counts[sample]['medium'], counts[sample]['long'], counts[sample]['bethesda'], 
+    sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(sample, patient, sample_type, counts[sample]['all'], counts[sample]['exon'], counts[sample]['all_oncogene'], counts[sample]['oncogene'], counts[sample]['oncogene_exon'], counts[sample]['repeat_1'], counts[sample]['repeat_2'], counts[sample]['repeat_3'], counts[sample]['repeat_4'], counts[sample]['short'], counts[sample]['medium'], counts[sample]['long'], counts[sample]['bethesda'], 
       '\t'.join([str(totals[sample][x]) for x in range(len(total_callers))]), 
       '\t'.join([str(counts[sample]['repeat_type_{}'.format(x)]) if 'repeat_type_{}'.format(x) in counts[sample] else '0' for x in sorted(list(repeat_types))]),
       '\t'.join([str(counts[sample]['il_{}'.format(x)]) if 'il_{}'.format(x) in counts[sample] else '0' for x in sorted(list(indel_lens))]),
@@ -153,6 +182,7 @@ if __name__ == '__main__':
   parser.add_argument('--counts', required='true', help='overall counts')
   parser.add_argument('--vcfs', required='true', nargs='+', help='vcf files')
   parser.add_argument('--verbose', action='store_true', help='more logging')
+  parser.add_argument('--transcribed_strand', action='store_true', help='use mutation on transcribed strand')
   parser.add_argument('--rotate_context', action='store_true', help='rotate contexts')
   args = parser.parse_args()
   if args.verbose:
@@ -160,4 +190,4 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.mmr, args.counts, args.vcfs, args.rotate_context)
+  main(args.mmr, args.counts, args.vcfs, args.rotate_context, args.transcribed_strand)

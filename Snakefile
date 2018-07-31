@@ -3,8 +3,9 @@ configfile: "cfg/config.yaml"
 # final output
 rule all:
   input:
-    "out/msi.summary",
-    "out/msi.summary.mini",
+    "out/msi.summary.tsv",
+    "out/msi.summary.rotated.transcribed.tsv",
+    "out/msi.summary.mini.tsv",
     "out/msi.measure.summary",
     "out/msi.cluster.tumours",
     "out/msi.primaries.cluster",
@@ -23,7 +24,12 @@ rule all:
     "out/msi.indel_context.all.heatmap.png",
     "out/msi.repeat_indel_context.all.heatmap.png",
     "out/msi.repeat_indel_context_rotated.all.heatmap.png",
-    "out/msi.repeat_context_emast.all.heatmap.png"
+    "out/msi.repeat_context_emast.all.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.raw.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.transcribed.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.log.heatmap.png",
+    "out/msi.repeat_context.all.rotated.transcribed.heatmap.png"
 
 ##### msi #####
 include: 'Snakefile.msi'

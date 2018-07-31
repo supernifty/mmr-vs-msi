@@ -41,6 +41,22 @@ In reference:
 * genome.fa
 * refseq
 
+### Generating reference/msi.candidates.bed
+* Use https://github.com/supernifty/tandem_repeats_nim
+```
+./main --repeat:1 --min:6 < genome.fa >tb1.out
+./main --repeat:2 --min:6 < genome.fa >tb2.out
+./main --repeat:3 --min:6 < genome.fa >tb3.out
+./main --repeat:4 --min:6 < genome.fa >tb4.out
+./main --repeat:5 --min:6 < genome.fa >tb5.out
+```
+
+* Use src/annotate.py
+```
+python src/annotate.py --name exon tb1.out tb2.out tb3.out tb4.out tb5.out < hg19.exons > ./msi.exons
+python src/annotate.py --name bethesda msi.exons < bethesda.bed | sort -k1,1 -k2,2n > reference/msi.candidates.bed
+```
+
 ## Dependencies
 * pindel
 

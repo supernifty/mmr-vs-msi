@@ -3,6 +3,7 @@ genome: 'reference/genome.fa'
 genome_lengths: 'reference/genome.lengths'
 refseq: 'reference/refseq180404'
 genes_mmr: 'cfg/genes.mmr.txt'
+genes_cosmic: 'cfg/genes.cosmic.txt'
 cosmic: 'reference/cosmic180407.tsv'
 cancer_type: 'prostate'
 slop: 1000
@@ -14,13 +15,18 @@ callers: [
 msi_callers: [
   'pindel'
 ]
+msi_qual: 300
 indel_length_cluster: [
   '-100000,-6',
   '-5,-1',
+  '-5,-2',
+  '-5,-3',
   '-1,0',
   '0,1',
   '1,5',
-  '6,100000'
+  '6,100000',
+  '-5,5',
+  '-100000,100000'
 ]
 samples: [
   SAMPLES

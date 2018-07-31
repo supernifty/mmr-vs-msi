@@ -21,10 +21,29 @@ def count_as_str(count):
 def net(count):
   return sum([x * count[x] for x in count])
 
-def main(regions, tumour_vcfs, normal_vcf, screen, summary, metadata):
+def find_normal(metadata, sample_prefix):
+  prefix, sample = sample_prefix.rsplit('/', 1)
+  
+  patient = None
+  normals = {}
+  # CMHS1,CMHP1,299bT,BT,N,,,
+  for line in metadata:
+    fields = line.strip('\n').split(',')
+    if fields[0] == sample:
+      patient = fields[1]
+    if fields[4] == 'Y':
+      normals[fields[1]] = fields[0]
+
+  if patient in normals:
+    return '/'.join([prefix, normals[patient]])
+  else:
+    logging.warn('Sample {} with patient {} not found in metadata'.format(sample, patient))
+    return None
+
+def main(regions, tumour_vcfs, screen, summary, metadata):
   logging.info('starting...')
 
-  logging.debug('reading %s...', regions)
+  logging.debug('reading regions from %s...', regions)
   count = 0
   intervals = {}
   for count, line in enumerate(open(regions, 'r')):
@@ -36,19 +55,30 @@ def main(regions, tumour_vcfs, normal_vcf, screen, summary, metadata):
       logging.debug('%i lines...', count + 1)
   logging.debug('reading %s: %i lines processed', regions, count + 1)
 
-  logging.debug('reading %s...', normal_vcf)
-  count = 0
-  added = 0
-  normal = {}
-  for count, variant in enumerate(cyvcf2.VCF(normal_vcf)):
-    indel_len = len(variant.ALT[0]) - len(variant.REF)
-    if indel_len != 0:
-      if variant.CHROM in intervals:
-        for interval in intervals[variant.CHROM][variant.POS]:
-          added += 1
-          interval.data['normal'][indel_len] += 1
-  logging.debug('%s: done reading %i variants, %i added', normal_vcf, count + 1, added)
+  # find normal from metadata
+  tumour_sample, rest = tumour_vcfs[0].split('.', 1)
+  normal_sample = find_normal(open(metadata, 'r'), tumour_sample)
 
+  # make a list of indels found in each msi region, for the normal vcf
+  for tumour_vcf in tumour_vcfs:
+    tumour_sample, rest = tumour_vcf.split('.', 1)
+    normal_vcf = '.'.join([normal_sample, rest])
+
+    logging.debug('reading %s...', normal_vcf)
+    
+    count = 0
+    added = 0
+    for count, variant in enumerate(cyvcf2.VCF(normal_vcf)):
+      indel_len = len(variant.ALT[0]) - len(variant.REF)
+      if indel_len != 0:
+        if variant.CHROM in intervals:
+          for interval in intervals[variant.CHROM][variant.POS]:
+            added += 1
+            interval.data['normal'][indel_len] += 1
+  
+    logging.debug('%s: done reading %i variants, %i added', normal_vcf, count + 1, added)
+
+  # make a list of indels found in each msi region, for the tumour vcf
   for tumour_vcf in tumour_vcfs:
     logging.debug('reading %s...', tumour_vcf)
     count = 0
@@ -62,6 +92,7 @@ def main(regions, tumour_vcfs, normal_vcf, screen, summary, metadata):
             added += 1
     logging.debug('%s: done reading %i variants, %i added', tumour_vcf, count + 1, added)
   
+  # find msi regions with different indel counts in the tumour relative to the normal
   logging.debug('finding differences...')
   same = 0
   different = 0
@@ -96,4 +127,4 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.regions, args.tumours, args.normal, args.screen, args.summary, args.metadata)
+  main(args.regions, args.tumours, args.screen, args.summary, args.metadata)
