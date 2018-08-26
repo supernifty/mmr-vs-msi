@@ -43,6 +43,21 @@
         "memory": 8192
     },
 
+    "msi_repeat_indel_context_rotated_vis":
+    {
+        "memory": 8192
+    },
+
+    "msi_repeat_indel_context_vis":
+    {
+        "memory": 8192
+    },
+
+    "msi_repeat_indel_context_rotated_raw_vis":
+    {
+        "memory": 8192
+    },
+
     "msi_vep":
     {
         "time": "24:00:00",
@@ -90,5 +105,11 @@
     {
         "time": "02:00:00",
         "memory": 8192
+    },
+
+    "annotate_msi_candidates":
+    {
+        "time": "04:00:00",
+        "memory": 2048
     }
 }

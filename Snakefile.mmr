@@ -46,6 +46,17 @@ rule mmr_stats:
   shell:
     "src/mmr_stats.py --all --verbose {input} 1>{output} 2>{log.stderr}"
 
+rule mmr_stats_just_ddr:
+  input:
+    summary="out/mmr.summary",
+    genes=config['genes_ddr']
+  output:
+    "out/ddr.summary"
+  log:
+    stderr="log/ddr.summary.stderr"
+  shell:
+    "src/mmr_filter.py --verbose --genes {input.genes} <{input.summary} 1>{output} 2>{log.stderr}"
+
 # remove common
 rule filter_common_mmr:
   input:

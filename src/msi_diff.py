@@ -1,6 +1,19 @@
 #!/usr/bin/env python
 '''
   find mutations that segregate provided clusters
+  sample1 = list of samples in group 1
+  sample2 = list of samples in group 2
+  stdin = msi.cluster.tumours
+
+  output
+  * category = 
+    - group1 if seen only in group1, 
+    - group2 if only seen in group2
+    - both if seen in both
+    - empty if seen in other
+  * type of indel seen for each sample in group1
+  * type of indel seen for each sample in group2
+  * annotation from msi.cluster.tumours
 '''
 
 import argparse
@@ -10,16 +23,26 @@ import sys
 def main(fh, sample1, sample2, out):
   logging.info('reading cluster from stdin...')
   header = fh.readline().strip('\n').split('\t')
+
+  if sample2 is None:
+    sample2 = header[6:] # everything
+
   empty = same = only1 = only2 = both = 0
+
   s1idx = []
   for sample in sample1:
     s1idx.append(header.index(sample))
   s2idx = []
+  new_sample2 = []
   for sample in sample2:
     if sample in sample1:
       logging.debug('skipping %s in sample2', sample)
       continue
     s2idx.append(header.index(sample))
+    new_sample2.append(sample)
+
+  sample2 = new_sample2
+  logging.debug('%i samples in group 1; %i samples in group2', len(s1idx), len(s2idx))
 
   sys.stdout.write('Cat\t{}\t{}\t{}\n'.format(sample1[0], sample2[0], '\t'.join(header[0:6])))
   for line in fh:
@@ -51,8 +74,8 @@ def main(fh, sample1, sample2, out):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='')
-  parser.add_argument('--sample1', required='true', nargs='+', help='samples in cluster')
-  parser.add_argument('--sample2', required='true', nargs='+', help='samples in cluster')
+  parser.add_argument('--sample1', required=True, nargs='+', help='samples in cluster')
+  parser.add_argument('--sample2', required=False, nargs='+', help='samples in cluster (default: all)')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   args = parser.parse_args()
   if args.verbose:

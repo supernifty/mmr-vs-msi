@@ -28,6 +28,9 @@ indel_length_cluster: [
   '-5,5',
   '-100000,100000'
 ]
+representative_samples: [
+  SAMPLES
+]
 samples: [
   SAMPLES
 ]

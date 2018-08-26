@@ -22,6 +22,11 @@ import sklearn.decomposition
 import sklearn.manifold
 import sklearn.metrics
 
+FIGSIZE=(36,36)
+FIGSIZE_TREE=(30,12)
+
+matplotlib.rcParams.update({'font.size': 36})
+
 def main(fh, target, categories):
   logging.info('reading cluster results from stdin...')
 
@@ -61,19 +66,25 @@ def main(fh, target, categories):
   logging.info('pca...')
   pca = sklearn.decomposition.PCA(n_components=2)
   projection = pca.fit_transform(X)
-  plt.figure(figsize=(18, 18))
+  plt.figure(figsize=FIGSIZE)
   plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
   for i, sample in enumerate(y_all):
     plt.annotate(sample, (projection[i, 0], projection[i, 1]))
   plt.savefig(target.replace('.png', '.pca.png'))
 
+  # also write pca as tsv
+  pca_tsv = target.replace('.png', '.pca.tsv')
+  with open(pca_tsv, 'w') as fh:
+    fh.write('sample\tprojection_0\tprojection_1\n') 
+    for i, sample in enumerate(y_all):
+      fh.write('{sample}\t{projection_0:.2f}\t{projection_1:.2f}\n'.format(sample=sample, projection_0=projection[i, 0], projection_1=projection[i, 1])) 
 
   # mds
   logging.info('mds...')
   distances = sklearn.metrics.pairwise_distances(X, metric='cosine')
   mds = sklearn.manifold.LocallyLinearEmbedding(n_neighbors=8, n_components=2, method='modified', eigen_solver='dense')
   projection = mds.fit_transform(distances)
-  plt.figure(figsize=(18, 18))
+  plt.figure(figsize=FIGSIZE)
   plt.scatter(projection[:, 0], projection[:, 1])
   for i, sample in enumerate(y_all):
     plt.annotate(sample, (projection[i, 0], projection[i, 1]))
@@ -83,7 +94,7 @@ def main(fh, target, categories):
   logging.info('tsne...')
   tsne = sklearn.manifold.TSNE(n_components=2, init='pca', random_state=0)
   projection = tsne.fit_transform(X)
-  plt.figure(figsize=(18, 18))
+  plt.figure(figsize=FIGSIZE)
   plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
   for i, sample in enumerate(y_all):
     plt.annotate(sample, (projection[i, 0], projection[i, 1]))
@@ -99,7 +110,7 @@ def main(fh, target, categories):
   Z = scipy.cluster.hierarchy.linkage(X, method='ward', metric='euclidean')
 
   logging.info('plotting...')
-  plt.figure(figsize=(30, 12))
+  plt.figure(figsize=FIGSIZE_TREE)
   plt.title('Hierarchical Clustering Dendrogram - All samples')
   plt.xlabel('sample index')
   plt.ylabel('distance')
@@ -119,7 +130,7 @@ def main(fh, target, categories):
         logging.debug(list(y_cat))
         X_cat = X[X.index.isin(y_cat)]
         Z = scipy.cluster.hierarchy.linkage(X_cat, method='ward', metric='euclidean')
-        plt.figure(figsize=(30, 12))
+        plt.figure(figsize=FIGSIZE_TREE)
         plt.title('Hierarchical Clustering Dendrogram - {}'.format(category))
         plt.xlabel('sample index')
         plt.ylabel('distance')
@@ -135,13 +146,19 @@ def main(fh, target, categories):
         logging.info('pca...')
         pca = sklearn.decomposition.PCA(n_components=2)
         projection = pca.fit_transform(X_cat)
-        plt.figure(figsize=(18, 18))
+        plt.figure(figsize=FIGSIZE)
         plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
         for i, sample in enumerate(y_cat):
           plt.annotate(sample, (projection[i, 0], projection[i, 1]))
         plt.savefig(target.replace('.png', '.{}.pca.png'.format(category)))
 
 
+        # also write pca as tsv
+        pca_tsv = target.replace('.png', '.{}.pca.tsv'.format(category))
+        with open(pca_tsv, 'w') as fh:
+          fh.write('sample\tprojection_0\tprojection_1\n') 
+          for i, sample in enumerate(y_cat):
+            fh.write('{sample}\t{projection_0:.2f}\t{projection_1:.2f}\n'.format(sample=sample, projection_0=projection[i, 0], projection_1=projection[i, 1])) 
 
       else:
         logging.info('skipping %s with %i samples', category, len(y_cat))
@@ -151,7 +168,7 @@ def main(fh, target, categories):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Cluster MSI')
   parser.add_argument('--verbose', action='store_true', help='more logging')
-  parser.add_argument('--image', default='dend.png', help='dend file')
+  parser.add_argument('--image', default='cluster.png', help='dend file')
   parser.add_argument('--categories', required=False, help='CSV of additional info about the sample')
   args = parser.parse_args()
   if args.verbose:

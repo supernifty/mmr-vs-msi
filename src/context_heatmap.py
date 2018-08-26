@@ -19,7 +19,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-rc={'font.size': 4, 'axes.labelsize': 4, 'legend.fontsize': 4.0, 'axes.titlesize': 4, 'xtick.labelsize': 4, 'ytick.labelsize': 4}
+FIGSIZE_FACTOR=2
+
+rc={'font.size': 4 * FIGSIZE_FACTOR, 'axes.labelsize': 4 * FIGSIZE_FACTOR, 'legend.fontsize': 4.0 * FIGSIZE_FACTOR, 'axes.titlesize': 4 * FIGSIZE_FACTOR, 'xtick.labelsize': 4 * FIGSIZE_FACTOR, 'ytick.labelsize': 4 * FIGSIZE_FACTOR}
 sns.set(rc=rc)
 
 import scipy.cluster.hierarchy
@@ -35,7 +37,7 @@ def rotate_repeat(r):
 
   return r[best:] + r[:best]
 
-def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=False, min_len=0, max_len=1000, highlight=None, normalize_custom=None, threshold_proportion=0, rotate_context=False):
+def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=False, min_len=0, max_len=1000, highlight=None, normalize_custom=None, threshold_proportion=0, rotate_context=False, normalize_sample=False):
   logging.info('reading from stdin...')
   header = None
   df = None
@@ -111,7 +113,7 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
   logging.info(df.head())
 
   if normalize_max:
-    logging.info('normalizing by max count...')
+    logging.info('normalizing by variant type count...')
     df = df / df.max()
     #df = ( df - df.min() ) / ( df.max() - df.min() )
     # and remove na columns
@@ -130,6 +132,10 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
           logging.info('skipped normalizing %s', fields[0])
     logging.info('normalizing by %s: updated %i', normalize_custom, updated)
 
+  elif normalize_sample:
+    logging.info('normalizing by sample variant count...')
+    df = df.div(df.sum(axis=1), axis=0)
+
   df = df.transpose()
 
   logging.info('(features, samples) = %s', df.shape)
@@ -142,7 +148,7 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
     sys.exit(0)
 
   logging.info('plotting...')
-  plot = sns.clustermap(df, figsize=(max(8, df.shape[1] / 10), max(8, df.shape[0] / 10)))
+  plot = sns.clustermap(df, figsize=(max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[1] / 10), max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[0] / 10)))
   plot.savefig(target_image)
     
   logging.info('done')
@@ -153,6 +159,7 @@ if __name__ == '__main__':
   parser.add_argument('--category', required=False, help='filter on type')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   parser.add_argument('--normalize_max', action='store_true', help='normalize using max count of each feature')
+  parser.add_argument('--normalize_sample', action='store_true', help='normalize using max count of each sample')
   parser.add_argument('--normalize_custom', required=False, help='normalize using a provided list')
   parser.add_argument('--log', action='store_true', help='apply log to counts')
   parser.add_argument('--prefix', required=False, default='rt_', help='feature prefix')
@@ -167,4 +174,4 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.image, sys.stdin, args.category, args.prefix, args.log, args.normalize_max, args.min_len, args.max_len, args.highlight, args.normalize_custom, args.threshold, args.rotate_context)
+  main(args.image, sys.stdin, args.category, args.prefix, args.log, args.normalize_max, args.min_len, args.max_len, args.highlight, args.normalize_custom, args.threshold, args.rotate_context, args.normalize_sample)

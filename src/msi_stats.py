@@ -21,6 +21,13 @@ def rotate_repeat(r):
 
   return r[best:] + r[:best]
 
+def normalize_complement(r):
+  rc = reverse_complement(r)
+  if r <= rc:
+    return r
+  else:
+    return rc
+
 RC = {'a': 't', 'c': 'g', 't': 'a', 'g': 'c', 'n': 'n', 'A': 'T', 'C': 'G', 'T': 'A', 'G': 'C', 'N': 'N'}
 def reverse_complement(repeat):
   return ''.join([RC[x] for x in repeat][::-1])
@@ -38,7 +45,7 @@ def transcribe_strand(repeat, exon, stats):
     logging.warn('unable to determine strand for exon: %s', exon)
     return repeat
 
-def main(mmr_result, count_result, vcfs, rotate_context, transcribed_strand):
+def main(mmr_result, count_result, vcfs, rotate_context, transcribed_strand, complement):
   logging.info('{} vcfs to process...'.format(len(vcfs)))
   # pull in mmr result
   #Sample  Patient SampleType      Genes
@@ -126,11 +133,15 @@ def main(mmr_result, count_result, vcfs, rotate_context, transcribed_strand):
       else:
         counts[sample]['long'] += 1
 
-      # repeat type
-      if rotate_context:
-        repeat_type = rotate_repeat(variant.INFO['msi_repeat'])
+      # complement
+      if complement:
+        repeat_type = normalize_complement(variant.INFO['msi_repeat']) 
       else:
         repeat_type = variant.INFO['msi_repeat']
+
+      # repeat type
+      if rotate_context:
+        repeat_type = rotate_repeat(repeat_type)
 
       # transcribed strand
       if transcribed_strand and variant.INFO.get('msi_exon') is not None:
@@ -183,6 +194,7 @@ if __name__ == '__main__':
   parser.add_argument('--vcfs', required='true', nargs='+', help='vcf files')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   parser.add_argument('--transcribed_strand', action='store_true', help='use mutation on transcribed strand')
+  parser.add_argument('--complement', action='store_true', help='normalize reverse complements')
   parser.add_argument('--rotate_context', action='store_true', help='rotate contexts')
   args = parser.parse_args()
   if args.verbose:
@@ -190,4 +202,4 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.mmr, args.counts, args.vcfs, args.rotate_context, args.transcribed_strand)
+  main(args.mmr, args.counts, args.vcfs, args.rotate_context, args.transcribed_strand, args.complement)

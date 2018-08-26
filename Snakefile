@@ -29,7 +29,13 @@ rule all:
     "out/msi.repeat_indel_context_rotated.all.threshold_0.3.heatmap.png",
     "out/msi.repeat_indel_context_rotated.all.threshold_0.3.transcribed.heatmap.png",
     "out/msi.repeat_indel_context_rotated.all.threshold_0.3.log.heatmap.png",
-    "out/msi.repeat_context.all.rotated.transcribed.heatmap.png"
+    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.sample_norm.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.representative.heatmap.png",
+    "out/msi.repeat_indel_context_rotated.all.representative.complemented.heatmap.png",
+    "out/msi.repeat_context.all.rotated.transcribed.heatmap.png",
+    "out/msi.unique.tsv",
+    "out/ddr.summary"
 
 ##### msi #####
 include: 'Snakefile.msi'

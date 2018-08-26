@@ -18,13 +18,16 @@ def main(name, annotations, beds, target, annotate_none):
   trees = {}
   for idx, line in enumerate(annotations):
     fields = line.strip('\n').split('\t')
-    if len(fields) < 4:
+    if len(fields) < 3:
       logging.warn('Too few fields on line %i: %s', idx, line.strip('\n'))
       continue
     chrom = fields[0]
     start = int(fields[1])
     finish = int(fields[2])
-    data = fields[3]
+    if len(fields) > 3:
+      data = fields[3]
+    else:
+      data = 1
     if chrom not in trees:
       trees[chrom] = intervaltree.IntervalTree()
       logging.info('added chromosome %s', chrom)

@@ -46,6 +46,18 @@ rule msi_assess_rotated:
   shell:
     "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context 1>{output} 2>{log.stderr}"
 
+rule msi_assess_complemented_rotated:
+  input:
+    mmr="out/mmr.summary",
+    counts="out/mutations.summary",
+    vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers'])
+  output:
+    "out/msi.summary.rotated.complemented.tsv"
+  log:
+    stderr="log/msi.summary_rotated_complemented.stderr",
+  shell:
+    "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context --complement 1>{output} 2>{log.stderr}"
+
 rule msi_assess:
   input:
     mmr="out/mmr.summary",
@@ -57,6 +69,37 @@ rule msi_assess:
     stderr="log/msi.summary.stderr",
   shell:
     "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} 1>{output} 2>{log.stderr}"
+
+### find unique msi mutated loci
+# process:
+
+# find uniquely mutated loci for each tumour
+rule msi_find_unique_loci:
+  input:
+    msi="out/msi.cluster.tumours",
+    vcf=expand("out/{{tumour}}.msi.{caller}.annotated.somatic.filtered.vcf", caller=config['msi_callers'])
+  output:
+    "out/{tumour}.msi.unique.vcf"
+  log:
+    stderr="log/msi.unique.{tumour}.stderr",
+  params:
+    tumour="{tumour}"
+  shell:
+    "module load bedtools-intel/2.27.1 && "
+    "src/msi_diff.py --sample1 {params.tumour} --verbose < {input.msi}  2>{log.stderr} | grep \"^\(Cat\|{params.tumour}\)\t\" | awk -v OFS='\t' '{{ print $4, $5-1, $6-1 }}' | " # makes a bed file
+    "bedtools intersect -header -a {input.vcf} -b stdin > {output}"
+
+rule msi_combine_unique_loci:
+  input:
+    vcfs=expand("out/{tumour}.msi.unique.vcf", tumour=config['tumours'])
+  output:
+    "out/msi.unique.tsv"
+  log:
+    stderr="log/msi.unique.stderr",
+  shell:
+    "src/combine_vcfs.py --vcfs {input.vcfs} >{output} 2>{log.stderr}"
+
+###
 
 rule msi_measure_summary:
   input:
@@ -213,6 +256,62 @@ rule msi_repeat_indel_context_rotated_raw_vis:
     "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --prefix rtil_ --threshold 0.1 < {input} 2>>{log.stderr}; "
     "done)"
 
+rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_sample_norm_vis:
+  input:
+    tsv="out/msi.summary.rotated.transcribed.tsv",
+  output:
+    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.sample_norm.heatmap.png"
+  log:
+    stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.sample_norm.stderr"
+  params:
+    samples=config['representative_samples']
+  shell:
+    "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_sample --prefix rtil_ --threshold 0.5 < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_sample --prefix rtil_ --threshold 0.5 < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>>{log.stderr}; "
+    "done)"
+
+rule msi_repeat_indel_context_rotated_complemented_higher_threshold_vis:
+  input:
+    tsv="out/msi.summary.rotated.complemented.tsv",
+  output:
+    "out/msi.repeat_indel_context_rotated.all.representative.complemented.heatmap.png"
+  log:
+    stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
+  params:
+    samples=config['representative_samples'],
+    threshold=0.99
+  shell:
+    "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_complemented_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_complemented_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_complemented_higher_threshold_vis.tsv 2>>{log.stderr}; "
+    "done)"
+
+rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis:
+  input:
+    tsv="out/msi.summary.rotated.transcribed.tsv",
+  output:
+    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.heatmap.png"
+  log:
+    stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
+  params:
+    samples=config['representative_samples'],
+    threshold=0.99
+  shell:
+    "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>>{log.stderr}; "
+    "done)"
+
 rule msi_repeat_indel_context_rotated_transcribed_high_threshold_vis:
   input:
     "out/msi.summary.rotated.transcribed.tsv"
@@ -258,6 +357,25 @@ rule msi_repeat_indel_context_rotated_log_vis:
     "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold 0.3 --log < {input} 2>>{log.stderr}; "
     "done)"
 
+rule msi_repeat_indel_context_rotated_representative_vis:
+  input:
+    tsv="out/msi.summary.rotated.tsv",
+  output:
+    "out/msi.repeat_indel_context_rotated.all.representative.heatmap.png"
+  log:
+    stderr="log/msi.repeat_indel_context_rotated_vis_representative.stderr"
+  params:
+    threshold=0.99,
+    samples=config['representative_samples']
+  shell:
+    "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>>{log.stderr}; "
+    "done)"
+
 rule msi_repeat_indel_context_rotated_vis:
   input:
     "out/msi.summary.rotated.tsv"
@@ -275,7 +393,7 @@ rule msi_repeat_indel_context_rotated_vis:
 
 rule msi_repeat_indel_context_vis:
   input:
-    "out/msi.summary"
+    "out/msi.summary.tsv"
   output:
     "out/msi.repeat_indel_context.all.heatmap.png"
   log:
@@ -316,6 +434,8 @@ rule filter_somatic_msi:
   shell:
     "src/subtract_germline.sh {input[0]} >{output} 2>{log.stderr}"
 
+# filter and annotate with af and dp
+# note that annotate af and dp is pindel only
 rule filter_somatic_msi_qual:
   input:
     vcf="out/{tumour}.msi.{caller}.annotated.somatic.vcf"
@@ -326,7 +446,7 @@ rule filter_somatic_msi_qual:
   params:
     qual=config['msi_qual'],
   shell:
-    "src/filter_vcf_qual.py --qual {params.qual} < {input.vcf} > {output} 2>{log.stderr}"
+    "src/filter_vcf_qual.py --qual {params.qual} < {input.vcf} | src/annotate_af.py --verbose > {output} 2>{log.stderr}"
 
 rule msi_regions_exons:
   input:
@@ -473,15 +593,62 @@ rule bed_stats:
   shell:
     "src/bed_stats.py <{input} 1>{output} 2>{log.stderr}"
 
+rule make_exon_annotations:
+  input:
+    config['refseq']
+  output:
+    "out/hg19.exons"
+  shell:
+    "src/exons_to_bed.py --annotate < {input} | sort -k1,1 -k2,2n > {output}"
+
+rule make_exon_annotations_ncRNA:
+  input:
+    config['refseq']
+  output:
+    "out/hg19.exons.ncRNA"
+  shell:
+    "src/exons_to_bed.py --filter ncRNA < {input} | sort -k1,1 -k2,2n > {output}"
+
+rule make_exon_annotations_3utr:
+  input:
+    config['refseq']
+  output:
+    "out/hg19.exons.3utr"
+  shell:
+    "src/exons_to_bed.py --filter 3UTR < {input} | sort -k1,1 -k2,2n > {output}"
+
+rule make_exon_annotations_5utr:
+  input:
+    config['refseq']
+  output:
+    "out/hg19.exons.5utr"
+  shell:
+    "src/exons_to_bed.py --filter 5UTR < {input} | sort -k1,1 -k2,2n > {output}"
+
+rule annotate_msi_candidates:
+  input:
+    msi=config["msi_loci"],
+    bethesda=config["bethesda"],
+    exons="out/hg19.exons",
+    threeUTR="out/hg19.exons.3utr",
+    fiveUTR="out/hg19.exons.5utr",
+    ncRNA="out/hg19.exons.ncRNA"
+  output:
+    "out/msi.annotated.bed"
+  shell: # TODO this could be more efficient
+    "src/annotate.py --name exon {input.msi} < {input.exons} > tmp/msi.exons.bed && "
+    "src/annotate.py --name 3UTR tmp/msi.exons.bed < {input.threeUTR} > tmp/msi.3utr.bed && "
+    "src/annotate.py --name 5UTR tmp/msi.3utr.bed < {input.fiveUTR} > tmp/msi.5utr.bed && "
+    "src/annotate.py --name ncRNA tmp/msi.5utr.bed < {input.ncRNA} > tmp/msi.ncRNA.bed && "
+    "src/annotate.py --name bethesda tmp/msi.ncRNA.bed < {input.bethesda} | sort -k1,1 -k2,2n > {output}"
+
 # limits msi regions by length and repeat type
 rule make_msi_regions:
   input:
-    "reference/msi.candidates.bed"
+    "out/msi.annotated.bed"
   output:
     "out/regions.msi.bed"
   log:
     stderr="log/make_msi_regions.stderr",
   shell:
     "src/filter_msi.py --exons_only --minlen 8 --maxlen 100000 --minrepeat 1 --maxrepeat 4 < {input} 1>{output} 2>{log.stderr}"
-
-
