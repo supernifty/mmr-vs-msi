@@ -3,17 +3,32 @@ genome: 'reference/genome.fa'
 genome_lengths: 'reference/genome.lengths'
 refseq: 'reference/refseq180404'
 genes_mmr: 'cfg/genes.mmr.txt'
+genes_ddr: 'cfg/genes.ddr.txt'
 genes_cosmic: 'cfg/genes.cosmic.txt'
 cosmic: 'reference/cosmic180407.tsv'
 cancer_type: 'prostate'
 slop: 1000
+
+# for mmr evaluation (multiple ok)
 callers: [
-  'varscan',
-  'pindel',
-  'gridss'
+  'platypus'
+  #'varscan',
+  #'pindel',
+  #'gridss'
 ]
+msi_loci: 'reference/msi.candidates.bed'
+bethesda: 'reference/bethesda.bed'
+
+# for mutational signatures
+snv_caller: 'platypus'
+snv_af: 0.1
+snv_dp: 40
+#snv_caller: 'caveman'
+
+# for msi evaluation (just one for now)
 msi_callers: [
-  'pindel'
+  'platypus'
+  #'pindel'
 ]
 msi_qual: 300
 indel_length_cluster: [

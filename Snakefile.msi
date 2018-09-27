@@ -32,7 +32,7 @@ rule msi_assess_transcribed_rotated:
   log:
     stderr="log/msi.summary_rotated_transcribed.stderr",
   shell:
-    "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context --transcribed_strand 1>{output} 2>{log.stderr}"
+    "src/msi_stats.py --verbose --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context --transcribed_strand 1>{output} 2>{log.stderr}"
 
 rule msi_assess_rotated:
   input:
@@ -44,7 +44,7 @@ rule msi_assess_rotated:
   log:
     stderr="log/msi.summary_rotated.stderr",
   shell:
-    "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context 1>{output} 2>{log.stderr}"
+    "src/msi_stats.py --verbose --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context 1>{output} 2>{log.stderr}"
 
 rule msi_assess_complemented_rotated:
   input:
@@ -56,7 +56,7 @@ rule msi_assess_complemented_rotated:
   log:
     stderr="log/msi.summary_rotated_complemented.stderr",
   shell:
-    "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context --complement 1>{output} 2>{log.stderr}"
+    "src/msi_stats.py --verbose --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} --rotate_context --complement 1>{output} 2>{log.stderr}"
 
 rule msi_assess:
   input:
@@ -68,7 +68,7 @@ rule msi_assess:
   log:
     stderr="log/msi.summary.stderr",
   shell:
-    "src/msi_stats.py --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} 1>{output} 2>{log.stderr}"
+    "src/msi_stats.py --verbose --mmr {input.mmr} --counts {input.counts} --vcfs {input.vcfs} 1>{output} 2>{log.stderr}"
 
 ### find unique msi mutated loci
 # process:
@@ -188,12 +188,31 @@ rule msi_repeat_context_vis:
     "out/msi.repeat_context.all.heatmap.png"
   log:
     stderr="log/msi.repeat_context_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --max_len 4 --threshold 0.1 --rotate_context < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --max_len 4 --threshold 0.1 --rotate_context < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>>{log.stderr}; "
+    "done)"
+
+rule msi_repeat_context_transcribed_vis_norm:
+  input:
+    "out/msi.summary.rotated.transcribed.tsv"
+  output:
+    "out/msi.repeat_context.all.rotated.transcribed.sample_norm.heatmap.png"
+  log:
+    stderr="log/msi.repeat_context_transcribed.vis.stderr"
+  params:
+    threshold=0
+  shell:
+    "src/context_heatmap.py --verbose --image {output} --normalize_sample --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_context_transcribed_vis:
@@ -203,12 +222,14 @@ rule msi_repeat_context_transcribed_vis:
     "out/msi.repeat_context.all.rotated.transcribed.heatmap.png"
   log:
     stderr="log/msi.repeat_context_transcribed.vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --max_len 4 --threshold 0.1 --rotate_context < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --max_len 4 --threshold 0.1 --rotate_context < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_context_emast_vis:
@@ -218,12 +239,14 @@ rule msi_repeat_context_emast_vis:
     "out/msi.repeat_context_emast.all.heatmap.png"
   log:
     stderr="log/msi.repeat_context_emast_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --min_len 4 --rotate_context --threshold 0.05 < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --min_len 4 --rotate_context --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --min_len 4 --rotate_context --threshold 0.05 < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rt_ --min_len 4 --rotate_context --threshold {params.threshold} < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_indel_context_vis:
@@ -233,12 +256,31 @@ rule msi_indel_context_vis:
     "out/msi.indel_context.all.heatmap.png"
   log:
     stderr="log/msi.indel_context_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix il_ --threshold 0.1 < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix il_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix il_ --threshold 0.1 < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix il_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
+    "done)"
+
+rule msi_repeat_indel_context_rotated_raw_vis_norm:
+  input:
+    "out/msi.summary.rotated.tsv"
+  output:
+    "out/msi.repeat_indel_context_rotated.all.sample_norm.heatmap.png"
+  log:
+    stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
+  params:
+    threshold=0
+  shell:
+    "src/context_heatmap.py --verbose --image {output} --prefix rtil_ --threshold {params.threshold} --normalize_sample < {input} 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --prefix rtil_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_indel_context_rotated_raw_vis:
@@ -248,12 +290,14 @@ rule msi_repeat_indel_context_rotated_raw_vis:
     "out/msi.repeat_indel_context_rotated.all.raw.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --prefix rtil_ --threshold 0.1 < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --prefix rtil_ --threshold 0.1 < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --prefix rtil_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_sample_norm_vis:
@@ -264,14 +308,15 @@ rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_sample_norm_v
   log:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.sample_norm.stderr"
   params:
-    samples=config['representative_samples']
+    samples=config['representative_samples'],
+    threshold=0
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
-    "src/context_heatmap.py --verbose --image {output} --normalize_sample --prefix rtil_ --threshold 0.5 < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_sample --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_sample --prefix rtil_ --threshold 0.5 < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_sample --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_indel_context_rotated_complemented_higher_threshold_vis:
@@ -283,7 +328,7 @@ rule msi_repeat_indel_context_rotated_complemented_higher_threshold_vis:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
   params:
     samples=config['representative_samples'],
-    threshold=0.99
+    threshold=0
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_complemented_higher_threshold_vis.tsv 2>{log.stderr} && "
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_complemented_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -302,7 +347,7 @@ rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
   params:
     samples=config['representative_samples'],
-    threshold=0.99
+    threshold=0
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -319,12 +364,14 @@ rule msi_repeat_indel_context_rotated_transcribed_high_threshold_vis:
     "out/msi.repeat_indel_context_rotated.all.threshold_0.3.transcribed.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold 0.3 < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold 0.3 < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_indel_context_rotated_high_threshold_vis:
@@ -334,12 +381,14 @@ rule msi_repeat_indel_context_rotated_high_threshold_vis:
     "out/msi.repeat_indel_context_rotated.all.threshold_0.3.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold 0.3 < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold 0.3 < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_indel_context_rotated_log_vis:
@@ -349,12 +398,50 @@ rule msi_repeat_indel_context_rotated_log_vis:
     "out/msi.repeat_indel_context_rotated.all.threshold_0.3.log.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold 0.3 --log < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} --log < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold 0.3 --log < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} --log < {input} 2>>{log.stderr}; "
+    "done)"
+
+rule msi_repeat_indel_context_rotated_vis_norm:
+  input:
+    tsv="out/msi.summary.rotated.tsv",
+  output:
+    "out/msi.repeat_indel_context_rotated.all.normalized.heatmap.png"
+  log:
+    stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
+  params:
+    threshold=0
+  shell:
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --normalize_sample --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_sample --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
+    "done)"
+
+rule msi_repeat_indel_context_rotated_representative_vis_norm:
+  input:
+    tsv="out/msi.summary.rotated.tsv",
+  output:
+    "out/msi.repeat_indel_context_rotated.all.representative.normalized.heatmap.png"
+  log:
+    stderr="log/msi.repeat_indel_context_rotated_vis_representative.stderr"
+  params:
+    threshold=0,
+    samples=config['representative_samples']
+  shell:
+    "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --normalize_sample --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>{log.stderr} && "
+    "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
+    "image=\"{output}\"; "
+    "image=${{image/all/$category}}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_sample --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_indel_context_rotated_representative_vis:
@@ -365,7 +452,7 @@ rule msi_repeat_indel_context_rotated_representative_vis:
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis_representative.stderr"
   params:
-    threshold=0.99,
+    threshold=0,
     samples=config['representative_samples']
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -383,12 +470,14 @@ rule msi_repeat_indel_context_rotated_vis:
     "out/msi.repeat_indel_context_rotated.all.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold 0.1 < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold 0.1 < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
     "done)"
 
 rule msi_repeat_indel_context_vis:
@@ -398,12 +487,14 @@ rule msi_repeat_indel_context_vis:
     "out/msi.repeat_indel_context.all.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_vis.stderr"
+  params:
+    threshold=0
   shell:
-    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold 0.1 < {input} 2>{log.stderr} && "
+    "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
     "image=\"{output}\"; "
     "image=${{image/all/$category}}; "
-    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold 0.1 < {input} 2>>{log.stderr}; "
+    "src/context_heatmap.py --verbose --category \"$category\" --image \"$image\" --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>>{log.stderr}; "
     "done)"
 
 # tumour specific analysis

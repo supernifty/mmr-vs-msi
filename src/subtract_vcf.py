@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''
   subtract calls from a vcf
+  note that this does NOT take into account genotype e.g. 0/0
 '''
 
 import argparse

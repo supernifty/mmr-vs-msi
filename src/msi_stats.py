@@ -59,7 +59,7 @@ def main(mmr_result, count_result, vcfs, rotate_context, transcribed_strand, com
   # pull in mutation result
   # this is unfiltered count of variants across the whole genome
   #Sample  Patient SampleType      Genes
-  #CMHS1   CMHP1   Tumour  PMS1:1, POLE:1
+  #Sample caller caller...
   totals = {}
   total_callers = []
   first = True
@@ -69,8 +69,11 @@ def main(mmr_result, count_result, vcfs, rotate_context, transcribed_strand, com
       first = False
     else:
       fields = line.strip('\n').split('\t')
-      if len(fields) >= 4:
+      if len(fields) >= 2:
         totals[fields[0]] = fields[1:]
+        logging.debug('%s: added %s', fields[0])
+      else:
+        logging.debug('%s: skipped %s', count_result, fields)
 
   # evaluate msi result
   callers = set()

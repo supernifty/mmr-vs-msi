@@ -31,7 +31,9 @@ def main(vcfs):
       except KeyError:
         oncogene = '' 
       gene = variant.INFO['msi_exon'].split('_')[0]
-      line = [sample, variant.CHROM, str(variant.POS), variant.REF, ','.join(variant.ALT), str(variant.QUAL), '{:.2f}'.format(variant.INFO['AF']), str(variant.INFO['DP']), gene, oncogene, variant.INFO['msi_exon'], detail]
+      #line = [sample, variant.CHROM, str(variant.POS), variant.REF, ','.join(variant.ALT), str(variant.QUAL), '{:.2f}'.format(variant.INFO['AF']), str(variant.INFO['DP']), gene, oncogene, variant.INFO['msi_exon'], detail]
+      #TODO af and dp
+      line = [sample, variant.CHROM, str(variant.POS), variant.REF, ','.join(variant.ALT), str(variant.QUAL), '0', '0', gene, oncogene, variant.INFO['msi_exon'], detail]
       sys.stdout.write('{}\n'.format('\t'.join(line)))
     logging.info('processing %s: done', vcf)
 

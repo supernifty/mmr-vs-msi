@@ -66,25 +66,25 @@ def main(fh, target, genes_fn):
   plt.savefig(target.replace('.png', '.pca.png'))
 
   # mds
-  logging.info('mds...')
-  distances = sklearn.metrics.pairwise_distances(X, metric='cosine')
-  mds = sklearn.manifold.LocallyLinearEmbedding(n_neighbors=8, n_components=2, method='modified', eigen_solver='dense')
-  projection = mds.fit_transform(distances)
-  plt.figure(figsize=(18, 18))
-  plt.scatter(projection[:, 0], projection[:, 1])
-  for i, sample in enumerate(y_all):
-    plt.annotate(sample, (projection[i, 0], projection[i, 1]))
-  plt.savefig(target.replace('.png', '.mds.png'))
+  #logging.info('mds...')
+  #distances = sklearn.metrics.pairwise_distances(X, metric='cosine')
+  #mds = sklearn.manifold.LocallyLinearEmbedding(n_neighbors=8, n_components=2, method='modified', eigen_solver='dense')
+  #projection = mds.fit_transform(distances)
+  #plt.figure(figsize=(18, 18))
+  #plt.scatter(projection[:, 0], projection[:, 1])
+  #for i, sample in enumerate(y_all):
+  #  plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+  #plt.savefig(target.replace('.png', '.mds.png'))
 
   # tsne
-  logging.info('tsne...')
-  tsne = sklearn.manifold.TSNE(n_components=2, init='pca', random_state=0)
-  projection = tsne.fit_transform(X)
-  plt.figure(figsize=(18, 18))
-  plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
-  for i, sample in enumerate(y_all):
-    plt.annotate(sample, (projection[i, 0], projection[i, 1]))
-  plt.savefig(target.replace('.png', '.tsne.png'))
+  #logging.info('tsne...')
+  #tsne = sklearn.manifold.TSNE(n_components=2, init='pca', random_state=0)
+  #projection = tsne.fit_transform(X)
+  #plt.figure(figsize=(18, 18))
+  #plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
+  #for i, sample in enumerate(y_all):
+  #  plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+  #plt.savefig(target.replace('.png', '.tsne.png'))
 
   logging.info('hierarchy...')
 

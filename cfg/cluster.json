@@ -101,6 +101,18 @@
         "memory": 4096
     },
 
+    "mutational_signature":
+    {
+        "time": "02:00:00",
+        "memory": 8192
+    },
+
+    "mutational_signature_germline":
+    {
+        "time": "02:00:00",
+        "memory": 8192
+    },
+
     "annotate_msi":
     {
         "time": "02:00:00",

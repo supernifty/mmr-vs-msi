@@ -26,6 +26,7 @@ conda create --name msi python=3.6
 source activate msi
 conda install --name msi snakemake
 conda install --name msi cyvcf2
+cd software/ && wget https://github.com/supernifty/mutational_signature/archive/0.1.tar.gz && tar xvfz 0.1.tar.gz && pip install -r mutational_signature-0.1/requirements.txt && cd -
 ```
 
 ## Setup
@@ -90,3 +91,4 @@ run.sh # kicks off the snakemake script
 * calculate hypermutation -> total number of mutations per megabase
 * cadd score
 * filter on dbsnp, 1000GP, GnomAd
+* mutational signatures

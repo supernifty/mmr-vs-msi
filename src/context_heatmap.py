@@ -19,7 +19,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-FIGSIZE_FACTOR=2
+# 2 = large, 1 = normal
+FIGSIZE_FACTOR=1
 
 rc={'font.size': 4 * FIGSIZE_FACTOR, 'axes.labelsize': 4 * FIGSIZE_FACTOR, 'legend.fontsize': 4.0 * FIGSIZE_FACTOR, 'axes.titlesize': 4 * FIGSIZE_FACTOR, 'xtick.labelsize': 4 * FIGSIZE_FACTOR, 'ytick.labelsize': 4 * FIGSIZE_FACTOR}
 sns.set(rc=rc)
@@ -99,6 +100,7 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
   df = df.convert_objects(convert_numeric=True)
   df.set_index('sample', inplace=True)
 
+  # TODO some other way of doing this
   # thresholds
   if threshold_proportion > 0:
     threshold = int(threshold_proportion * df.shape[0])
@@ -112,6 +114,10 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
 
   logging.info(df.head())
 
+  if normalize_sample:
+    logging.info('normalizing by sample variant count...')
+    df = df.div(df.sum(axis=1), axis=0)
+
   if normalize_max:
     logging.info('normalizing by variant type count...')
     df = df / df.max()
@@ -119,7 +125,7 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
     # and remove na columns
     df.dropna(1, inplace=True)
 
-  elif normalize_custom is not None:
+  if normalize_custom is not None:
     logging.info('normalizing by %s...', normalize_custom)
     updated = 0
     for line in open(normalize_custom, 'r'):
@@ -132,10 +138,6 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
           logging.info('skipped normalizing %s', fields[0])
     logging.info('normalizing by %s: updated %i', normalize_custom, updated)
 
-  elif normalize_sample:
-    logging.info('normalizing by sample variant count...')
-    df = df.div(df.sum(axis=1), axis=0)
-
   df = df.transpose()
 
   logging.info('(features, samples) = %s', df.shape)
@@ -145,11 +147,17 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
     sys.exit(0)
   if df.shape[0] < 1:
     logging.warn('not enough features. exiting')
+    open(target_image, 'a').close() # TODO
     sys.exit(0)
 
   logging.info('plotting...')
-  plot = sns.clustermap(df, figsize=(max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[1] / 10), max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[0] / 10)))
-  plot.savefig(target_image)
+  try:
+    plot = sns.clustermap(df, figsize=(max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[1] / 10), max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[0] / 10)))
+    plot.savefig(target_image)
+  except FloatingPointError as e: # TODO
+    logging.warn('sns.clustermap failed')
+    open(target_image, 'a').close()
+    sys.exit(0)
     
   logging.info('done')
 

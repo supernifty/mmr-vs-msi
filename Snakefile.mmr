@@ -37,8 +37,8 @@ rule mmr_cluster_cancertype:
 # mmr analysis output is a list of candidates likely to be dMMR
 rule mmr_stats:
   input:
-    expand("out/{tumour}.mmr.{caller}.filter.somatic.rare.vcf", tumour=config['tumours'], caller=config['callers']),
-    expand("out/{tumour}.mmr.hmmcopy.filter.bed", tumour=config['tumours'])
+    expand("out/{tumour}.mmr.{caller}.filter.somatic.rare.vcf", tumour=config['tumours'], caller=config['callers'])
+    #expand("out/{tumour}.mmr.hmmcopy.filter.bed", tumour=config['tumours']) # TODO uncomment to enable hmmcopy
   output:
     "out/mmr.summary"
   log:

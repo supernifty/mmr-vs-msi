@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''
   extracts just the calls for the provided sample name from matched calls
+  note that this does NOT take into account the genotype
 '''
 
 import argparse
@@ -11,7 +12,7 @@ import cyvcf2
 
 UUIDS="cfg/samples.uuids"
 
-def main(sample, qual, pindel):
+def main(sample, qual, pindel, filter_homref, strelka):
   logging.debug('reading vcf from stdin. qual filter %i, pindel filter %.2f', qual, pindel)
   vcf_in = cyvcf2.VCF('-')
   if sample not in vcf_in.samples:
@@ -46,6 +47,25 @@ def main(sample, qual, pindel):
       if variant.format('PP') / variant.format('PR') < pindel and variant.format('NP') / variant.format('NR') < pindel:
         ok = False
 
+    # strelka_indel
+    if all([x in variant.FORMAT for x in ('TAR', 'TIR')]):
+      tir = sum(variant.format('TIR')[0])
+      tar = sum(variant.format('TAR')[0])
+      if tar == 0 or tir / (tir + tar) < strelka:
+        ok = False
+
+    # strelka
+    if variant.INFO.get('AF') is not None:
+      if variant.INFO.get('AF') < strelka:
+        ok = False
+
+    # platypus
+    # check gt 0,1,2,3==HOM_REF (0/0), HET (0/1), UNKNOWN (./.), HOM_ALT (1/1)
+    if filter_homref:
+      gt = variant.gt_types[0]
+      if gt == 0:
+        ok = False
+
     if ok:
       sys.stdout.write(str(variant))
       allowed += 1
@@ -62,10 +82,12 @@ if __name__ == '__main__':
   parser.add_argument('--sample', required=True, help='sample to extract')
   parser.add_argument('--minqual', required=False, type=int, default=-1, help='minimum sample quality')
   parser.add_argument('--minpindel', required=False, type=float, default=0.01, help='minimum proportion pindel call to mapped reads')
+  parser.add_argument('--minstrelka', required=False, type=float, default=0.01, help='minimum proportion strelka call to mapped reads')
+  parser.add_argument('--filter_homref', action='store_true', help='filter homref')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   args = parser.parse_args()
   if args.verbose:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
-  main(args.sample, args.minqual, args.minpindel)
+  main(args.sample, args.minqual, args.minpindel, args.filter_homref, args.minstrelka)

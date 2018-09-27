@@ -22,10 +22,15 @@ import sklearn.decomposition
 import sklearn.manifold
 import sklearn.metrics
 
-FIGSIZE=(36,36)
-FIGSIZE_TREE=(30,12)
+# large
+#FIGSIZE=(36,36)
+#FIGSIZE_TREE=(30,12)
+#matplotlib.rcParams.update({'font.size': 36})
 
-matplotlib.rcParams.update({'font.size': 36})
+# normal
+FIGSIZE=(12,12)
+FIGSIZE_TREE=(18,12)
+matplotlib.rcParams.update({'font.size': 18})
 
 def main(fh, target, categories):
   logging.info('reading cluster results from stdin...')
@@ -65,40 +70,55 @@ def main(fh, target, categories):
   # pca
   logging.info('pca...')
   pca = sklearn.decomposition.PCA(n_components=2)
-  projection = pca.fit_transform(X)
-  plt.figure(figsize=FIGSIZE)
-  plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
-  for i, sample in enumerate(y_all):
-    plt.annotate(sample, (projection[i, 0], projection[i, 1]))
-  plt.savefig(target.replace('.png', '.pca.png'))
-
-  # also write pca as tsv
-  pca_tsv = target.replace('.png', '.pca.tsv')
-  with open(pca_tsv, 'w') as fh:
-    fh.write('sample\tprojection_0\tprojection_1\n') 
+  try:
+    projection = pca.fit_transform(X)
+    plt.figure(figsize=FIGSIZE)
+    plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
+    plt.title('PCA plot based on indel mutations in microsatellite regions')
+    plt.xlabel('PCA Component 1')
+    plt.ylabel('PCA Component 2')
     for i, sample in enumerate(y_all):
-      fh.write('{sample}\t{projection_0:.2f}\t{projection_1:.2f}\n'.format(sample=sample, projection_0=projection[i, 0], projection_1=projection[i, 1])) 
+      plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+    plt.savefig(target.replace('.png', '.pca.png'))
+
+    # also write pca as tsv
+    pca_tsv = target.replace('.png', '.pca.tsv')
+    with open(pca_tsv, 'w') as fh:
+      fh.write('sample\tprojection_0\tprojection_1\n') 
+      for i, sample in enumerate(y_all):
+        fh.write('{sample}\t{projection_0:.2f}\t{projection_1:.2f}\n'.format(sample=sample, projection_0=projection[i, 0], projection_1=projection[i, 1])) 
+  except:
+    logging.warn('pca failed for %s', target) # TODO
 
   # mds
-  logging.info('mds...')
-  distances = sklearn.metrics.pairwise_distances(X, metric='cosine')
-  mds = sklearn.manifold.LocallyLinearEmbedding(n_neighbors=8, n_components=2, method='modified', eigen_solver='dense')
-  projection = mds.fit_transform(distances)
-  plt.figure(figsize=FIGSIZE)
-  plt.scatter(projection[:, 0], projection[:, 1])
-  for i, sample in enumerate(y_all):
-    plt.annotate(sample, (projection[i, 0], projection[i, 1]))
-  plt.savefig(target.replace('.png', '.mds.png'))
+  #logging.info('mds...')
+  #distances = sklearn.metrics.pairwise_distances(X, metric='cosine')
+  #mds = sklearn.manifold.LocallyLinearEmbedding(n_neighbors=8, n_components=2, method='modified', eigen_solver='dense')
+  #projection = mds.fit_transform(distances)
+  #plt.figure(figsize=FIGSIZE)
+  #plt.scatter(projection[:, 0], projection[:, 1])
+  #plt.title('MDS plot based on indel mutations in microsatellite regions')
+  #plt.xlabel('MDS Component 1')
+  #plt.ylabel('MDS Component 2')
+  #for i, sample in enumerate(y_all):
+  #  plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+  #plt.savefig(target.replace('.png', '.mds.png'))
 
   # tsne
-  logging.info('tsne...')
-  tsne = sklearn.manifold.TSNE(n_components=2, init='pca', random_state=0)
-  projection = tsne.fit_transform(X)
-  plt.figure(figsize=FIGSIZE)
-  plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
-  for i, sample in enumerate(y_all):
-    plt.annotate(sample, (projection[i, 0], projection[i, 1]))
-  plt.savefig(target.replace('.png', '.tsne.png'))
+  try:
+    logging.info('tsne...')
+    tsne = sklearn.manifold.TSNE(n_components=2, init='pca', random_state=0)
+    projection = tsne.fit_transform(X)
+    plt.figure(figsize=FIGSIZE)
+    plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
+    plt.title('t-SNE plot based on indel mutations in microsatellite regions')
+    plt.xlabel('t-SNE Component 1')
+    plt.ylabel('t-SNE Component 2')
+    for i, sample in enumerate(y_all):
+      plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+    plt.savefig(target.replace('.png', '.tsne.png'))
+  except:
+    logging.warn('tsne failed for %s', target) # TODO
 
 
   #km = sklearn.cluster.KMeans(n_clusters=4, init='k-means++', max_iter=100, n_init=1, verbose=True)
@@ -143,22 +163,25 @@ def main(fh, target, categories):
         plt.savefig(target.replace('.png', '.{}.png'.format(category)))
 
         # pca
-        logging.info('pca...')
-        pca = sklearn.decomposition.PCA(n_components=2)
-        projection = pca.fit_transform(X_cat)
-        plt.figure(figsize=FIGSIZE)
-        plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
-        for i, sample in enumerate(y_cat):
-          plt.annotate(sample, (projection[i, 0], projection[i, 1]))
-        plt.savefig(target.replace('.png', '.{}.pca.png'.format(category)))
-
-
-        # also write pca as tsv
-        pca_tsv = target.replace('.png', '.{}.pca.tsv'.format(category))
-        with open(pca_tsv, 'w') as fh:
-          fh.write('sample\tprojection_0\tprojection_1\n') 
+        try:
+          logging.info('pca...')
+          pca = sklearn.decomposition.PCA(n_components=2)
+          projection = pca.fit_transform(X_cat)
+          plt.figure(figsize=FIGSIZE)
+          plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
           for i, sample in enumerate(y_cat):
-            fh.write('{sample}\t{projection_0:.2f}\t{projection_1:.2f}\n'.format(sample=sample, projection_0=projection[i, 0], projection_1=projection[i, 1])) 
+            plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+          plt.savefig(target.replace('.png', '.{}.pca.png'.format(category)))
+
+
+          # also write pca as tsv
+          pca_tsv = target.replace('.png', '.{}.pca.tsv'.format(category))
+          with open(pca_tsv, 'w') as fh:
+            fh.write('sample\tprojection_0\tprojection_1\n') 
+            for i, sample in enumerate(y_cat):
+              fh.write('{sample}\t{projection_0:.2f}\t{projection_1:.2f}\n'.format(sample=sample, projection_0=projection[i, 0], projection_1=projection[i, 1])) 
+        except:
+          logging.warn('pca failed for %s', target) # TODO
 
       else:
         logging.info('skipping %s with %i samples', category, len(y_cat))
