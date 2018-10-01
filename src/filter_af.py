@@ -35,16 +35,28 @@ def main(sample, af_threshold, dp_threshold, ignore_filter):
       skipped_pass += 1
       continue
 
-    if variant.INFO["DP"] < dp_threshold: # somatic + germline
+    try:
+      dp = variant.INFO["DP"] 
+    except:
+      dp = variant.format("DP")
+      if dp is not None:
+        dp = dp[sample_id][0]
+
+    if dp is not None and dp < dp_threshold: # somatic + germline
       skipped_dp += 1
       continue
 
     try:
-      af = variant.format("AF")[sample_id][0] 
+      af = variant.format("AF")
+      if af is not None:
+        af = [sample_id][0] 
     except:
-      af = variant.INFO["AF"]
+      try:
+        af = variant.INFO["AF"]
+      except:
+        af = None
 
-    if af < af_threshold:
+    if af is not None and af < af_threshold:
       skipped_af += 1
       continue
 

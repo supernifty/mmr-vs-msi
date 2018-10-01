@@ -45,12 +45,13 @@ rule all:
     "out/msi.repeat_indel_context_rotated.all.representative.normalized.heatmap.png",
     "out/msi.unique.tsv",
     "out/ddr.summary",
-    "out/mutational_signatures.tsv",
-    "out/mutational_signatures_germline.tsv"
+    "out/mutational_signatures.tsv", # somatic mutational signatures
+    "out/mutational_signatures_germline.tsv" # germline mutational signatures
 
 ##### msi #####
 include: 'Snakefile.msi'
 include: 'Snakefile.mmr'
+#include: 'Snakefile.differential'
 
 ### overall stats
 
@@ -128,7 +129,7 @@ rule mutational_signature_germline:
     dp=config["snv_dp"]
   shell:
     "(module load htslib-intel/1.5 && "
-    "src/filter_af.py --sample NORMAL --af {params.af} --dp {params.dp} < {input.vcf} | bgzip > tmp/{wildcards.germline}.filter.vcf.gz && "
+    "src/filter_af.py --sample {wildcards.germline} --af {params.af} --dp {params.dp} < {input.vcf} | bgzip > tmp/{wildcards.germline}.filter.vcf.gz && "
     "python software/mutational_signature-0.1/count.py --genome {input.reference} --vcf tmp/{wildcards.germline}.filter.vcf.gz > out/{wildcards.germline}.mutational_signature.counts && "
     "python software/mutational_signature-0.1/plot.py out/{wildcards.germline}.mutational_signature.png < out/{wildcards.germline}.mutational_signature.counts && "
     "python software/mutational_signature-0.1/decompose.py --signatures software/mutational_signature-0.1/signatures30.txt --counts out/{wildcards.germline}.mutational_signature.counts > {output}) 2>{log.stderr}"

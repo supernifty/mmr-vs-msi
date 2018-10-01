@@ -3,6 +3,7 @@
   copies across all input files
 '''
 
+import argparse
 import logging
 import os
 import sys
@@ -12,11 +13,9 @@ LOGGING_LEVEL=logging.DEBUG
 METADATA='cfg/sample-metadata-crc.csv'
 SAMPLES='cfg/samples'
 TUMOURS='cfg/tumours'
-#SOURCE='/scratch/VR0211/pan-prostate/out'
-SOURCE='/scratch/UOM0040/peter/AGRF_CAGRF17380_H5CNYDSXX/out'
 
 #INCLUDE=('make_uuids', 'varscan', 'varscan_indel', 'gridss', 'hmmcopy', 'pindel', 'platypus', 'platypus_crc', 'strelka', 'strelka_indel', 'caveman', 'config')
-INCLUDE=('strelka_indel', 'config')
+INCLUDE=('strelka', 'strelka_indel', 'config')
 #INCLUDE=('config',)
 
 def run(cmd):
@@ -79,7 +78,7 @@ def find_tumour(sample, db):
 
   return db[1][patient]
 
-def main():
+def main(source):
   logging.info('starting...')
   if 'make_uuids' in INCLUDE:
     run("src/make_uuids.sh > cfg/samples.uuids")
@@ -93,15 +92,15 @@ def main():
       if os.path.isfile('in/{sample}.varscan.vcf'.format(sample=sample)):
         logging.debug('skipping {sample}.varscan.vcf'.format(sample=sample))
       else:
-        run('ln -s {source}/{sample}.varscan.high.vcf in/{sample}.varscan.vcf'.format(source=SOURCE, sample=sample)) # snvs
+        run('ln -s {source}/{sample}.varscan.high.vcf in/{sample}.varscan.vcf'.format(source=source, sample=sample)) # snvs
   
     # varscan indel
     if 'varscan_indel' in INCLUDE:
       if os.path.isfile('in/{sample}.varscan_indel.vcf'.format(sample=sample)):
         logging.debug('skipping {sample}.varscan_indel.vcf'.format(sample=sample))
       else:
-        #run('ln -s {source}/{sample}.varscan_indel.high.vcf in/{sample}.varscan_indel.vcf'.format(source=SOURCE, sample=sample)) # indels
-        run('ln -s {source}/{sample}.varscan_indel.vcf in/{sample}.varscan_indel.vcf'.format(source=SOURCE, sample=sample)) # indels
+        #run('ln -s {source}/{sample}.varscan_indel.high.vcf in/{sample}.varscan_indel.vcf'.format(source=source, sample=sample)) # indels
+        run('ln -s {source}/{sample}.varscan_indel.vcf in/{sample}.varscan_indel.vcf'.format(source=source, sample=sample)) # indels
 
     # pindel
     if 'pindel' in INCLUDE:
@@ -113,9 +112,9 @@ def main():
           if tumour is None:
             logging.warn('Skipping {}: unable to find tumour'.format(sample))
             continue
-          run('gunzip < {source}/{tumour}.pindel-1.1.2.vcf.gz | src/extract_sample.py --minpindel 0.01 --sample NORMAL --verbose > in/{sample}.pindel.vcf'.format(source=SOURCE, tumour=tumour, sample=sample))
+          run('gunzip < {source}/{tumour}.pindel-1.1.2.vcf.gz | src/extract_sample.py --minpindel 0.01 --sample NORMAL --verbose > in/{sample}.pindel.vcf'.format(source=source, tumour=tumour, sample=sample))
         else:
-          run('gunzip < {source}/{sample}.pindel-1.1.2.vcf.gz | src/extract_sample.py --minpindel 0.01 --sample TUMOUR --verbose > in/{sample}.pindel.vcf'.format(source=SOURCE, sample=sample))
+          run('gunzip < {source}/{sample}.pindel-1.1.2.vcf.gz | src/extract_sample.py --minpindel 0.01 --sample TUMOUR --verbose > in/{sample}.pindel.vcf'.format(source=source, sample=sample))
   
     # gridss
     if 'gridss' in INCLUDE:
@@ -128,20 +127,20 @@ def main():
           if tumour is None:
             logging.warn('Skipping {}: unable to find tumour'.format(sample))
             continue
-          run('src/extract_sample.py --sample {sample}.mapped.bam --minqual 500 --verbose < {source}/{tumour}.gridss.vcf > in/{sample}.gridss.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          run('src/extract_sample.py --sample {sample}.mapped.bam --minqual 500 --verbose < {source}/{tumour}.gridss.vcf > in/{sample}.gridss.vcf'.format(source=source, sample=sample, tumour=tumour))
         else:
           # gridss - tumours
-          run('src/extract_sample.py --sample {sample}.mapped.bam --minqual 500 --verbose < {source}/{sample}.gridss.vcf > in/{sample}.gridss.vcf'.format(source=SOURCE, sample=sample))
+          run('src/extract_sample.py --sample {sample}.mapped.bam --minqual 500 --verbose < {source}/{sample}.gridss.vcf > in/{sample}.gridss.vcf'.format(source=source, sample=sample))
   
     # hmmcopy
     if 'hmmcopy' in INCLUDE:
       if os.path.isfile('in/{sample}.hmmcopy'.format(sample=sample)):
         logging.debug('skipping {sample}.hmmcopy'.format(sample=sample))
       else:
-        if os.path.isfile('{source}/{sample}.hmmcopy/normal_segments.txt'.format(source=SOURCE, sample=sample)):
-          run('ln -s {source}/{sample}.hmmcopy/normal_segments.txt in/{sample}.hmmcopy'.format(source=SOURCE, sample=sample))
-        elif os.path.isfile('{source}/{sample}.hmmcopy/somatic_segments.txt'.format(source=SOURCE, sample=sample)):
-          run('ln -s {source}/{sample}.hmmcopy/somatic_segments.txt in/{sample}.hmmcopy'.format(source=SOURCE, sample=sample))
+        if os.path.isfile('{source}/{sample}.hmmcopy/normal_segments.txt'.format(source=source, sample=sample)):
+          run('ln -s {source}/{sample}.hmmcopy/normal_segments.txt in/{sample}.hmmcopy'.format(source=source, sample=sample))
+        elif os.path.isfile('{source}/{sample}.hmmcopy/somatic_segments.txt'.format(source=source, sample=sample)):
+          run('ln -s {source}/{sample}.hmmcopy/somatic_segments.txt in/{sample}.hmmcopy'.format(source=source, sample=sample))
 
     if not is_normal(sample, db):
       tumours.add(sample)
@@ -158,9 +157,9 @@ def main():
           if tumour is None:
             logging.warn('Skipping {}: unable to find tumour'.format(sample))
             continue
-          run('src/extract_sample.py --sample {sample}.mapped.bam --filter_homref --verbose < {source}/{tumour}.platypus.vcf > in/{sample}.platypus.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          run('src/extract_sample.py --sample {sample}.mapped.bam --filter_homref --verbose < {source}/{tumour}.platypus.vcf > in/{sample}.platypus.vcf'.format(source=source, sample=sample, tumour=tumour))
         else: # tumour
-          run('src/extract_sample.py --sample {sample}.mapped.bam --filter_homref --verbose < {source}/{sample}.platypus.vcf > in/{sample}.platypus.vcf'.format(source=SOURCE, sample=sample))
+          run('src/extract_sample.py --sample {sample}.mapped.bam --filter_homref --verbose < {source}/{sample}.platypus.vcf > in/{sample}.platypus.vcf'.format(source=source, sample=sample))
 
     if 'platypus_crc' in INCLUDE:
       if False and os.path.isfile('in/{sample}.platypus.vcf'.format(sample=sample)):
@@ -171,12 +170,12 @@ def main():
           if tumour is None:
             logging.warn('Skipping {}: unable to find tumour'.format(sample))
             continue
-          run('src/extract_sample.py --sample {sample}.sorted.dups --filter_homref --verbose < {source}/{tumour}.platypus.joint.vcf.gz > in/{sample}.platypus.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          run('src/extract_sample.py --sample {sample}.sorted.dups --filter_homref --verbose < {source}/{tumour}.platypus.joint.vcf.gz > in/{sample}.platypus.vcf'.format(source=source, sample=sample, tumour=tumour))
         else: # tumour
-          run('src/extract_sample.py --sample {sample}.sorted.dups --filter_homref --verbose < {source}/{sample}.platypus.somatic.vcf.gz > in/{sample}.platypus.vcf'.format(source=SOURCE, sample=sample))
+          run('src/extract_sample.py --sample {sample}.sorted.dups --filter_homref --verbose < {source}/{sample}.platypus.somatic.vcf.gz > in/{sample}.platypus.vcf'.format(source=source, sample=sample))
 
     if 'strelka' in INCLUDE:
-      if False and os.path.isfile('in/{sample}.strelka.vcf'.format(sample=sample)):
+      if os.path.isfile('in/{sample}.strelka.vcf'.format(sample=sample)):
         logging.debug('skipping {sample}.strelka.vcf'.format(sample=sample)) 
       else:
         if is_normal(sample, db):
@@ -184,14 +183,14 @@ def main():
           if tumour is None:
             logging.warn('Skipping {}: unable to find tumour'.format(sample))
             continue
-          #run('src/extract_sample.py --sample NORMAL --verbose < {source}/{tumour}.strelka.somatic.snvs.af.norm.vcf.gz > in/{sample}.strelka.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          #run('src/extract_sample.py --sample NORMAL --verbose < {source}/{tumour}.strelka.somatic.snvs.af.norm.vcf.gz > in/{sample}.strelka.vcf'.format(source=source, sample=sample, tumour=tumour))
           # use the actual germline calls
-          run('src/extract_sample.py --sample {sample} --filter_homref --verbose < {source}/{sample}.strelka.germline.filter_gt.vep.vcf.gz > in/{sample}.strelka.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          run('src/extract_sample.py --sample {sample} --filter_homref --verbose < {source}/{sample}.strelka.germline.filter_gt.vep.vcf.gz > in/{sample}.strelka.vcf'.format(source=source, sample=sample, tumour=tumour))
         else: # copy the tumour
-          run('src/extract_sample.py --sample TUMOR --verbose < {source}/{sample}.strelka.somatic.snvs.af.norm.vcf.gz > in/{sample}.strelka.vcf'.format(source=SOURCE, sample=sample))
+          run('src/extract_sample.py --sample TUMOR --verbose < {source}/{sample}.strelka.somatic.snvs.af.norm.vcf.gz > in/{sample}.strelka.vcf'.format(source=source, sample=sample))
 
     if 'strelka_indel' in INCLUDE:
-      if False and os.path.isfile('in/{sample}.strelka_indel.vcf'.format(sample=sample)):
+      if os.path.isfile('in/{sample}.strelka_indel.vcf'.format(sample=sample)):
         logging.debug('skipping {sample}.strelka_indel.vcf'.format(sample=sample)) 
       else:
         if is_normal(sample, db):
@@ -199,11 +198,11 @@ def main():
           if tumour is None:
             logging.warn('Skipping {}: unable to find tumour'.format(sample))
             continue
-          #run('src/extract_sample.py --sample NORMAL --verbose < {source}/{tumour}.strelka.somatic.indels.vep.vcf.gz > in/{sample}.strelka_indel.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          #run('src/extract_sample.py --sample NORMAL --verbose < {source}/{tumour}.strelka.somatic.indels.vep.vcf.gz > in/{sample}.strelka_indel.vcf'.format(source=source, sample=sample, tumour=tumour))
           # use the actual germline calls
-          run('src/extract_sample.py --sample {sample} --filter_homref --verbose < {source}/{sample}.strelka.germline.filter_gt.vep.vcf.gz > in/{sample}.strelka_indel.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          run('src/extract_sample.py --sample {sample} --filter_homref --verbose < {source}/{sample}.strelka.germline.filter_gt.vep.vcf.gz > in/{sample}.strelka_indel.vcf'.format(source=source, sample=sample, tumour=tumour))
         else: # tumour
-          run('src/extract_sample.py --sample TUMOR --verbose < {source}/{sample}.strelka.somatic.indels.vep.vcf.gz > in/{sample}.strelka_indel.vcf'.format(source=SOURCE, sample=sample))
+          run('src/extract_sample.py --sample TUMOR --verbose < {source}/{sample}.strelka.somatic.indels.vep.vcf.gz > in/{sample}.strelka_indel.vcf'.format(source=source, sample=sample))
 
     # caveman CMHS1.caveman-1.1.2.flagged.muts.vcf
     # caveman marks all germline 0|0 so it will contain no variants
@@ -216,9 +215,9 @@ def main():
           if tumour is None:
             logging.warn('Skipping {}: unable to find tumour'.format(sample))
             continue
-          run('src/extract_sample.py --sample NORMAL --filter_homref --verbose < {source}/{tumour}.caveman-1.1.2.flagged.muts.vcf > in/{sample}.caveman.vcf'.format(source=SOURCE, sample=sample, tumour=tumour))
+          run('src/extract_sample.py --sample NORMAL --filter_homref --verbose < {source}/{tumour}.caveman-1.1.2.flagged.muts.vcf > in/{sample}.caveman.vcf'.format(source=source, sample=sample, tumour=tumour))
         else: # tumour
-          run('src/extract_sample.py --sample TUMOUR --filter_homref --verbose < {source}/{sample}.caveman-1.1.2.flagged.muts.vcf > in/{sample}.caveman.vcf'.format(source=SOURCE, sample=sample))
+          run('src/extract_sample.py --sample TUMOUR --filter_homref --verbose < {source}/{sample}.caveman-1.1.2.flagged.muts.vcf > in/{sample}.caveman.vcf'.format(source=source, sample=sample))
 
 
   # exclude any tumour that doesn't have a normal
@@ -244,5 +243,12 @@ def main():
   logging.info('done')
 
 if __name__ == '__main__':
-  logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=LOGGING_LEVEL)
-  main()
+  parser = argparse.ArgumentParser(description='Copy input files')
+  parser.add_argument('--source', required=True, help='root directory for input vcfs')
+  parser.add_argument('--verbose', action='store_true', help='more logging')
+  args = parser.parse_args()
+  if args.verbose:
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
+  else:
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+  main(args.source)
