@@ -580,7 +580,6 @@ rule msi_cluster_samples_vis:
   shell:
     "src/cluster_msi.py --image {output} --verbose --categories {input[1]} <{input[0]} 2>{log.stderr}"
 
-
 # cluster msi on all samples (not just tumour)
 rule msi_cluster_samples:
   input:

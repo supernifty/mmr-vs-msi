@@ -52,3 +52,11 @@ samples: [
 tumours: [
   TUMOURS
 ]
+
+group1: [
+  TUMOURS
+]
+
+group2: [
+  TUMOURS
+]

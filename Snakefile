@@ -46,12 +46,13 @@ rule all:
     "out/msi.unique.tsv",
     "out/ddr.summary",
     "out/mutational_signatures.tsv", # somatic mutational signatures
-    "out/mutational_signatures_germline.tsv" # germline mutational signatures
+    "out/mutational_signatures_germline.tsv", # germline mutational signatures
+    "out/aggregated/msi.affected_proportion.png"
 
 ##### msi #####
 include: 'Snakefile.msi'
 include: 'Snakefile.mmr'
-#include: 'Snakefile.differential'
+include: 'Snakefile.differential'
 
 ### overall stats
 

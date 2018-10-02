@@ -1,0 +1,44 @@
+
+### comparing groups for common and different gene mutations
+
+# steps
+# - obtain a list of affected items (genes) for each sample
+# - turn this into proportions for each group
+# - plots and other analyses
+
+# generate a table of samples with which genes are affected for that sample in an msi region 
+rule affected_genes:
+  input:
+    "out/msi.cluster.tumours" # Chrom   Begin   End     Annotation      Len     Samples 0151010101_T    0151100011_T...
+  output:
+    "out/aggregated/msi.affected_genes.tsv"
+  log:
+    stderr="log/affected_genes.stderr"
+  shell:
+    "src/affected_genes.py --verbose < {input} >{output} 2>{log.stderr}"
+
+# find what proportion of genes are affected in specified groups of interest
+rule affected_proportion:
+  input:
+    "out/aggregated/msi.affected_genes.tsv"
+  output:
+    "out/aggregated/msi.affected_proportion.tsv"
+  log:
+    stderr="log/affected_proportion.stderr"
+  params:
+    group1=config['group1'],
+    group2=config['group2']
+  shell:
+    "src/compare_groups.py --verbose --group1 {params.group1} --group2 {params.group2} < {input} >{output} 2>{log.stderr}"
+
+rule plot_affected:
+  input:
+    cosmic=config['cosmic'],
+    affected="out/aggregated/msi.affected_proportion.tsv"
+  output:
+    "out/aggregated/msi.affected_proportion.png"
+  log:
+    stderr="log/plot_affected.stderr"
+  shell:
+    "src/plot_affected.py --labels --verbose --output {output} --cosmic {input.cosmic} <{input.affected} 2>{log.stderr}"
+
