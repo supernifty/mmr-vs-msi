@@ -6,4 +6,5 @@ pandas
 scipy
 seaborn
 sklearn
+statsmodels
 fastcluster

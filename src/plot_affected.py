@@ -32,31 +32,33 @@ def main(output, labels, cosmic_fn):
 
   logging.info('reading from stdin...')
   plt.figure(figsize=FIGSIZE)
-  # Gene    Group1_Affected Group1_Unaffected       Group1_Prop     Group2_Affected Group2_Unaffected       Group2_Prop     Prop_Diff
+  # Gene    Group1_Affected Group1_Unaffected       Group1_Prop     Group2_Affected Group2_Unaffected       Group2_Prop     Prop_Diff   p_value
   header = None
-  points = collections.defaultdict(list)
   xs = []
   ys = []
   ls = []
+  pvalues = []
   for idx, row in enumerate(csv.reader(sys.stdin, delimiter='\t')):
     if header is None:
       header = row
       continue
     point = (float(row[3]), float(row[6]))
-    points[point].append(row[0])
     xs.append(point[0])
     ys.append(point[1])
+    #pvalues.append(float(row[8])) # raw p value
+    pvalues.append(float(row[9])) # adjusted p value
     ls.append(row[0])
 
   xs = rand_jitter(xs)
   ys = rand_jitter(ys)
 
-  plt.scatter(xs, ys, alpha=0.5)
+  plt.scatter(xs, ys, c=pvalues, alpha=0.5, cmap='jet_r')
   plt.title('Comparison of proportion of samples containing a mutation by gene')
   plt.xlabel('Proportion of samples affected in group 1 (MMRd)')
   plt.ylabel('Proportion of samples affected in group 2 (MMRp)')
   plt.xlim(-0.1, 1.1)
   plt.ylim(-0.1, 1.1)
+  plt.colorbar()
 
   plt.annotate("", xy=(0, 0), xycoords='data', xytext=(1, 1), textcoords='data',
               arrowprops=dict(arrowstyle="-",
@@ -68,10 +70,10 @@ def main(output, labels, cosmic_fn):
 
   if labels:
     for i, gene in enumerate(ls):
-      if gene in cosmic:
+      if gene.split('_')[0] in cosmic or pvalues[i] < 0.05:
         plt.annotate(gene, (xs[i], ys[i]), color='#000030')
       else:
-        plt.annotate(gene, (xs[i], ys[i]), color='#606060', alpha=0.1)
+        plt.annotate(gene, (xs[i], ys[i]), color='#606060', alpha=0.2)
 
   logging.info('saving image...')
   plt.savefig(output)

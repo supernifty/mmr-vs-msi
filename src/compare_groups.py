@@ -9,6 +9,9 @@ import csv
 import logging
 import sys
 
+import scipy.stats
+import statsmodels.stats.multitest
+
 def main(group1_list, group2_list):
   logging.info('reading from stdin...')
   # input is of the form:
@@ -41,8 +44,10 @@ def main(group1_list, group2_list):
         count[gene]['{}_affected'.format(group)] += 1
 
   # now write results 
-  sys.stdout.write('Gene\tGroup1_Affected\tGroup1_Unaffected\tGroup1_Prop\tGroup2_Affected\tGroup2_Unaffected\tGroup2_Prop\tProp_Diff\n')
+  sys.stdout.write('Gene\tGroup1_Affected\tGroup1_Unaffected\tGroup1_Prop\tGroup2_Affected\tGroup2_Unaffected\tGroup2_Prop\tProp_Diff\tp_value\tp_adjusted\n')
 
+  result = []
+  pvalues = []
   for gene in sorted(header[1:]):
     if count[gene]['1_affected'] + count[gene]['1_unaffected'] > 0:
       g1_prop = count[gene]['1_affected'] / (count[gene]['1_affected'] + count[gene]['1_unaffected'])
@@ -56,7 +61,21 @@ def main(group1_list, group2_list):
       logging.warn('Gene {} has no samples in group 2', gene)
       continue
 
-    sys.stdout.write('{}\t{}\t{}\t{:.3f}\t{}\t{}\t{:.3f}\t{:.3f}\n'.format(gene, count[gene]['1_affected'], count[gene]['1_unaffected'], g1_prop, count[gene]['2_affected'], count[gene]['2_unaffected'], g2_prop, g1_prop - g2_prop))
+    contingency = [[count[gene]['1_affected'], count[gene]['2_affected']], [count[gene]['1_unaffected'], count[gene]['2_unaffected']]]
+    if contingency[0] == [0, 0] or contingency[1] == [0, 0]: # both groups have no affected, or both groups have no unaffected
+      p_value = 1
+    else:
+      p_value = scipy.stats.chi2_contingency(contingency)[1]
+
+    pvalues.append(p_value)
+    result.append('{}\t{}\t{}\t{:.3f}\t{}\t{}\t{:.3f}\t{:.3f}\t{:.7f}'.format(gene, count[gene]['1_affected'], count[gene]['1_unaffected'], g1_prop, count[gene]['2_affected'], count[gene]['2_unaffected'], g2_prop, g1_prop - g2_prop, p_value))
+
+  logging.info('calculating adjusted p-values...')
+  adjusteds = statsmodels.stats.multitest.multipletests(pvalues, method='fdr_bh')[1]
+  
+  logging.info('writing results...')
+  for output, adjusted in zip(result, adjusteds):
+    sys.stdout.write('{}\t{:.7f}\n'.format(output, adjusted))
 
   logging.info('done')
 

@@ -14,9 +14,10 @@ import csv
 import logging
 import sys
 
-def find_genes(annotations):
+def find_genes(annotations, annotate):
   result = set()
   # determine the gene from annotation repeat=TTCT;length=8;exon=DDX11L1_exon_0_0_chr1_11874_f[11873:12227],LOC102725121_exon_0_0_chr1_11869_f[11868:12227];exon=DDX11L1_exon_0_3_11874_f[11873:12227];ncRNA=1[11873:12227]
+  additional = set()
   for ann in annotations.split(';'):
     if '=' in ann:
       name, values = ann.split('=', 1)
@@ -24,11 +25,19 @@ def find_genes(annotations):
         for value in values.split(','):
           gene, _ = value.split('_', 1)
           result.add(gene)
+      elif annotate is not None and name in annotate:
+        additional.add(name)
     else:
       logging.debug('skipped %s', ann)
-  return result
+  if len(additional) == 0:
+    return result
 
-def main():
+  annotated_result = set()
+  for gene in result:
+    annotated_result.add('{}_{}'.format(gene, '_'.join(list(additional))))
+  return annotated_result
+
+def main(annotate):
   logging.info('reading from stdin...')
 
   counts = {}
@@ -43,7 +52,7 @@ def main():
       continue
 
     # genes associated with this msi location
-    genes = find_genes(row[3])
+    genes = find_genes(row[3], annotate)
     
     # now update the counts of all samples
     for sample_col in range(6, len(header)):
@@ -67,6 +76,7 @@ def main():
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Assess MSI')
+  parser.add_argument('--annotate', nargs='+', help='additional annotations to include from input file')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   args = parser.parse_args()
   if args.verbose:
@@ -74,4 +84,4 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main()
+  main(args.annotate)

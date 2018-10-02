@@ -726,11 +726,11 @@ rule annotate_msi_candidates:
   output:
     "out/msi.annotated.bed"
   shell: # TODO this could be more efficient
-    "src/annotate.py --name exon {input.msi} < {input.exons} > tmp/msi.exons.bed && "
-    "src/annotate.py --name 3UTR tmp/msi.exons.bed < {input.threeUTR} > tmp/msi.3utr.bed && "
-    "src/annotate.py --name 5UTR tmp/msi.3utr.bed < {input.fiveUTR} > tmp/msi.5utr.bed && "
-    "src/annotate.py --name ncRNA tmp/msi.5utr.bed < {input.ncRNA} > tmp/msi.ncRNA.bed && "
-    "src/annotate.py --name bethesda tmp/msi.ncRNA.bed < {input.bethesda} | sort -k1,1 -k2,2n > {output}"
+    "src/annotate.py --name exon {input.msi} < {input.exons} > tmp/msi.exons.bed && " # exons
+    "src/annotate.py --name 3UTR tmp/msi.exons.bed < {input.threeUTR} > tmp/msi.3utr.bed && " # 3'
+    "src/annotate.py --name 5UTR tmp/msi.3utr.bed < {input.fiveUTR} > tmp/msi.5utr.bed && " # 5'
+    "src/annotate.py --name ncRNA tmp/msi.5utr.bed < {input.ncRNA} > tmp/msi.ncRNA.bed && " # ncRNA
+    "src/annotate.py --name bethesda tmp/msi.ncRNA.bed < {input.bethesda} | sort -k1,1 -k2,2n > {output}" # bethesda
 
 # limits msi regions by length and repeat type
 rule make_msi_regions:

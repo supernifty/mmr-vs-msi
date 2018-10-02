@@ -47,7 +47,7 @@ rule all:
     "out/ddr.summary",
     "out/mutational_signatures.tsv", # somatic mutational signatures
     "out/mutational_signatures_germline.tsv", # germline mutational signatures
-    "out/aggregated/msi.affected_proportion.png"
+    "out/aggregated/msi.affected_proportion.png" # comparing groups
 
 ##### msi #####
 include: 'Snakefile.msi'

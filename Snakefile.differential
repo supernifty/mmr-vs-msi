@@ -17,28 +17,41 @@ rule affected_genes:
   shell:
     "src/affected_genes.py --verbose < {input} >{output} 2>{log.stderr}"
 
-# find what proportion of genes are affected in specified groups of interest
-rule affected_proportion:
+# merge replicates
+rule merge_replicates:
   input:
     "out/aggregated/msi.affected_genes.tsv"
   output:
-    "out/aggregated/msi.affected_proportion.tsv"
+    "out/aggregated/msi.affected_genes.merged.tsv"
+  log:
+    stderr="log/merge_replicates.stderr"
+  params:
+    replicates=config['replicates']
+  shell:
+    "src/merge_replicates.py --verbose --replicates {params.replicates} <{input} >{output} 2>{log.stderr}"
+
+# find what proportion of genes are affected in specified groups of interest
+rule affected_proportion:
+  input:
+    "out/aggregated/msi.affected_genes.merged.tsv"
+  output:
+    raw="out/aggregated/msi.affected_proportion.tsv",
+    sorted="out/aggregated/msi.affected_proportion.sorted.tsv"
   log:
     stderr="log/affected_proportion.stderr"
   params:
     group1=config['group1'],
     group2=config['group2']
   shell:
-    "src/compare_groups.py --verbose --group1 {params.group1} --group2 {params.group2} < {input} >{output} 2>{log.stderr}"
+    "src/compare_groups.py --verbose --group1 {params.group1} --group2 {params.group2} < {input} >{output.raw} 2>{log.stderr} && sort -n -k9 < {output.raw} > {output.sorted}"
 
 rule plot_affected:
   input:
-    cosmic=config['cosmic'],
     affected="out/aggregated/msi.affected_proportion.tsv"
   output:
     "out/aggregated/msi.affected_proportion.png"
   log:
     stderr="log/plot_affected.stderr"
   shell:
-    "src/plot_affected.py --labels --verbose --output {output} --cosmic {input.cosmic} <{input.affected} 2>{log.stderr}"
+    "src/plot_affected.py --labels --verbose --output {output} <{input.affected} 2>{log.stderr}"
 
