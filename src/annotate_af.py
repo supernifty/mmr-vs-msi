@@ -13,6 +13,7 @@ import cyvcf2
 def main():
   logging.debug('reading vcf from stdin...')
   vcf_in = cyvcf2.VCF('-')
+
   vcf_in.add_info_to_header({'ID': 'AF', 'Description': 'Calculated allele frequency', 'Type':'Float', 'Number': '1'})
   vcf_in.add_info_to_header({'ID': 'DP', 'Description': 'Calculated depth', 'Type':'Float', 'Number': '1'})
 
@@ -21,15 +22,36 @@ def main():
   stats = { 'min_af': 1e6, 'max_af': -1, 'min_dp': 1e6, 'max_dp': -1, 'allowed': 0, 'denied': 0}
   for variant in vcf_in:
     ok = True
+
+    # pindel
     if all([x in variant.FORMAT for x in ('PP', 'NP', 'PR', 'NR')]):
       dp = variant.format('PR')[0][0] + variant.format('NR')[0][0]
       af = (variant.format('PP')[0][0] + variant.format('NP')[0][0]) / dp
       variant.INFO["AF"] = af
       variant.INFO["DP"] = float(dp)
-      stats['min_af'] = min(stats['min_af'], af)
-      stats['min_dp'] = min(stats['min_dp'], dp)
-      stats['max_af'] = max(stats['max_af'], af)
-      stats['max_dp'] = max(stats['max_dp'], dp)
+
+    # strelka
+    elif all([x in variant.FORMAT for x in ('TAR', 'TIR')]):
+      tir = sum(variant.format('TIR')[0])
+      tar = sum(variant.format('TAR')[0])
+      if tir + tar == 0:
+        af = 0.0
+      else:
+        af = tir / (tir + tar)
+
+      dp = int(sum([sum(x) for x in variant.format('DP')]))
+      variant.INFO["AF"] = af
+      variant.INFO["DP"] = dp
+
+    else: # not strelka or pindel
+      logging.warn('Failed to add AF to variant')
+      af = 0.0
+      dp = 0.0
+
+    stats['min_af'] = min(stats['min_af'], af)
+    stats['max_af'] = max(stats['max_af'], af)
+    stats['min_dp'] = min(stats['min_dp'], dp)
+    stats['max_dp'] = max(stats['max_dp'], dp)
 
     if ok:
       sys.stdout.write(str(variant))

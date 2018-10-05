@@ -2,11 +2,11 @@
 # overall stats incorporating msi and mmr
 #rule msi_assess:
 #  input:
-#    "out/mmr.summary",
-#    "out/mutations.summary",
+#    "out/aggregate/mmr.summary.tsv",
+#    "out/aggregate/mutations.summary.tsv",
 #    expand("out/{sample}.msi.{caller}.annotated.vcf", sample=config['samples'], caller=config['msi_callers'])
 #  output:
-#    "out/msi.summary"
+#    "out/aggregate/msi.summary"
 #  log:
 #    stderr="log/msi.summary.stderr",
 #  shell:
@@ -16,19 +16,19 @@
 rule msi_mini:
   input:
     genes=config["genes_mmr"],
-    summary="out/msi.summary.tsv"
+    summary="out/aggregate/msi.summary.tsv"
   output:
-    "out/msi.summary.mini.tsv"
+    "out/aggregate/msi.summary.mini.tsv"
   shell:
     "src/just_mmr.py {input.genes} < {input.summary} > {output}"
 
 rule msi_assess_transcribed_rotated:
   input:
-    mmr="out/mmr.summary",
-    counts="out/mutations.summary",
+    mmr="out/aggregate/mmr.summary.tsv",
+    counts="out/aggregate/mutations.summary.tsv",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers'])
   output:
-    "out/msi.summary.rotated.transcribed.tsv"
+    "out/aggregate/msi.summary.rotated.transcribed.tsv"
   log:
     stderr="log/msi.summary_rotated_transcribed.stderr",
   shell:
@@ -36,11 +36,11 @@ rule msi_assess_transcribed_rotated:
 
 rule msi_assess_rotated:
   input:
-    mmr="out/mmr.summary",
-    counts="out/mutations.summary",
+    mmr="out/aggregate/mmr.summary.tsv",
+    counts="out/aggregate/mutations.summary.tsv",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers'])
   output:
-    "out/msi.summary.rotated.tsv"
+    "out/aggregate/msi.summary.rotated.tsv"
   log:
     stderr="log/msi.summary_rotated.stderr",
   shell:
@@ -48,11 +48,11 @@ rule msi_assess_rotated:
 
 rule msi_assess_complemented_rotated:
   input:
-    mmr="out/mmr.summary",
-    counts="out/mutations.summary",
+    mmr="out/aggregate/mmr.summary.tsv",
+    counts="out/aggregate/mutations.summary.tsv",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers'])
   output:
-    "out/msi.summary.rotated.complemented.tsv"
+    "out/aggregate/msi.summary.rotated.complemented.tsv"
   log:
     stderr="log/msi.summary_rotated_complemented.stderr",
   shell:
@@ -60,11 +60,11 @@ rule msi_assess_complemented_rotated:
 
 rule msi_assess:
   input:
-    mmr="out/mmr.summary",
-    counts="out/mutations.summary",
+    mmr="out/aggregate/mmr.summary.tsv",
+    counts="out/aggregate/mutations.summary.tsv",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers'])
   output:
-    "out/msi.summary.tsv"
+    "out/aggregate/msi.summary.tsv"
   log:
     stderr="log/msi.summary.stderr",
   shell:
@@ -76,7 +76,7 @@ rule msi_assess:
 # find uniquely mutated loci for each tumour
 rule msi_find_unique_loci:
   input:
-    msi="out/msi.cluster.tumours",
+    msi="out/aggregate/msi.cluster.tumours",
     vcf=expand("out/{{tumour}}.msi.{caller}.annotated.somatic.filtered.vcf", caller=config['msi_callers'])
   output:
     "out/{tumour}.msi.unique.vcf"
@@ -85,7 +85,7 @@ rule msi_find_unique_loci:
   params:
     tumour="{tumour}"
   shell:
-    "module load bedtools-intel/2.27.1 && "
+    "{config[module_bedtools]} && "
     "src/msi_diff.py --sample1 {params.tumour} --verbose < {input.msi}  2>{log.stderr} | grep \"^\(Cat\|{params.tumour}\)\t\" | awk -v OFS='\t' '{{ print $4, $5-1, $6-1 }}' | " # makes a bed file
     "bedtools intersect -header -a {input.vcf} -b stdin > {output}"
 
@@ -93,7 +93,7 @@ rule msi_combine_unique_loci:
   input:
     vcfs=expand("out/{tumour}.msi.unique.vcf", tumour=config['tumours'])
   output:
-    "out/msi.unique.tsv"
+    "out/aggregate/msi.unique.tsv"
   log:
     stderr="log/msi.unique.stderr",
   shell:
@@ -105,17 +105,17 @@ rule msi_measure_summary:
   input:
     expand("out/{tumour}.msi_measure_summary", tumour=config['tumours'])
   output:
-    "out/msi.measure.summary"
+    "out/aggregate/msi.measure.summary"
   shell:
     "cat {input} > {output}"
 
 # visualization: clustering, etc
 rule msi_cluster_vis:
   input:
-    "out/msi.cluster.tumours",
+    "out/aggregate/msi.cluster.tumours",
     "cfg/htsdb.csv"
   output:
-    "out/msi.tumours.png"
+    "out/aggregate/msi.tumours.png"
   log:
     stderr="log/msi_cluster_vis.stderr",
   shell:
@@ -123,10 +123,10 @@ rule msi_cluster_vis:
 
 rule msi_cluster_vis_range:
   input:
-    "out/msi.cluster.{range}.tsv",
+    "out/aggregate/msi.cluster.{range}.tsv",
     "cfg/htsdb.csv"
   output:
-    "out/msi.cluster.{range}.png"
+    "out/aggregate/msi.cluster.{range}.png"
   log:
     stderr="log/msi_cluster_vis_{range}.stderr",
   shell:
@@ -134,11 +134,11 @@ rule msi_cluster_vis_range:
 
 rule msi_cluster_primaries:
   input:
-    bed="out/regions.msi.final.exons.bed",
+    bed="out/ref/regions.msi.final.exons.bed",
     categories="cfg/htsdb.csv",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers']),
   output:
-    "out/msi.primaries.cluster"
+    "out/aggregate/msi.primaries.cluster"
   log:
     stderr="log/msi.cluster.stderr",
   shell:
@@ -146,11 +146,11 @@ rule msi_cluster_primaries:
 
 rule msi_cluster_blood:
   input:
-    bed="out/regions.msi.final.exons.bed",
+    bed="out/ref/regions.msi.final.exons.bed",
     categories="cfg/htsdb.csv",
     vcfs=expand("out/{sample}.msi.{caller}.annotated.vcf", sample=config['samples'], caller=config['msi_callers']),
   output:
-    "out/msi.blood.cluster"
+    "out/aggregate/msi.blood.cluster"
   log:
     stderr="log/msi.blood.cluster.stderr",
   shell:
@@ -158,10 +158,10 @@ rule msi_cluster_blood:
 
 rule msi_cluster_tumours:
   input:
-    bed="out/regions.msi.final.exons.bed",
+    bed="out/ref/regions.msi.final.exons.bed",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers']),
   output:
-    "out/msi.cluster.tumours"
+    "out/aggregate/msi.cluster.tumours"
   log:
     stderr="log/msi.cluster.stderr",
   shell:
@@ -169,10 +169,10 @@ rule msi_cluster_tumours:
 
 rule msi_cluster_range:
   input:
-    bed="out/regions.msi.final.exons.bed",
+    bed="out/ref/regions.msi.final.exons.bed",
     vcfs=expand("out/{tumour}.msi.{caller}.annotated.somatic.filtered.vcf", tumour=config['tumours'], caller=config['msi_callers']),
   output:
-    "out/msi.cluster.{range}.tsv"
+    "out/aggregate/msi.cluster.{range}.tsv"
   log:
     stderr="log/msi.cluster.{range}.stderr"
   params:
@@ -183,13 +183,13 @@ rule msi_cluster_range:
 
 rule msi_repeat_context_vis:
   input:
-    "out/msi.summary.tsv"
+    "out/aggregate/msi.summary.tsv"
   output:
-    "out/msi.repeat_context.all.heatmap.png"
+    "out/aggregate/msi.repeat_context.all.heatmap.png"
   log:
     stderr="log/msi.repeat_context_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -200,13 +200,13 @@ rule msi_repeat_context_vis:
 
 rule msi_repeat_context_transcribed_vis_norm:
   input:
-    "out/msi.summary.rotated.transcribed.tsv"
+    "out/aggregate/msi.summary.rotated.transcribed.tsv"
   output:
-    "out/msi.repeat_context.all.rotated.transcribed.sample_norm.heatmap.png"
+    "out/aggregate/msi.repeat_context.all.rotated.transcribed.sample_norm.heatmap.png"
   log:
     stderr="log/msi.repeat_context_transcribed.vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_sample --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -217,13 +217,13 @@ rule msi_repeat_context_transcribed_vis_norm:
 
 rule msi_repeat_context_transcribed_vis:
   input:
-    "out/msi.summary.rotated.transcribed.tsv"
+    "out/aggregate/msi.summary.rotated.transcribed.tsv"
   output:
-    "out/msi.repeat_context.all.rotated.transcribed.heatmap.png"
+    "out/aggregate/msi.repeat_context.all.rotated.transcribed.heatmap.png"
   log:
     stderr="log/msi.repeat_context_transcribed.vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --max_len 4 --threshold {params.threshold} --rotate_context < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -234,13 +234,13 @@ rule msi_repeat_context_transcribed_vis:
 
 rule msi_repeat_context_emast_vis:
   input:
-    "out/msi.summary.tsv"
+    "out/aggregate/msi.summary.tsv"
   output:
-    "out/msi.repeat_context_emast.all.heatmap.png"
+    "out/aggregate/msi.repeat_context_emast.all.heatmap.png"
   log:
     stderr="log/msi.repeat_context_emast_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rt_ --min_len 4 --rotate_context --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -251,13 +251,13 @@ rule msi_repeat_context_emast_vis:
 
 rule msi_indel_context_vis:
   input:
-    "out/msi.summary.tsv"
+    "out/aggregate/msi.summary.tsv"
   output:
-    "out/msi.indel_context.all.heatmap.png"
+    "out/aggregate/msi.indel_context.all.heatmap.png"
   log:
     stderr="log/msi.indel_context_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix il_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -268,13 +268,13 @@ rule msi_indel_context_vis:
 
 rule msi_repeat_indel_context_rotated_raw_vis_norm:
   input:
-    "out/msi.summary.rotated.tsv"
+    "out/aggregate/msi.summary.rotated.tsv"
   output:
-    "out/msi.repeat_indel_context_rotated.all.sample_norm.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.sample_norm.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --prefix rtil_ --threshold {params.threshold} --normalize_sample < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -285,13 +285,13 @@ rule msi_repeat_indel_context_rotated_raw_vis_norm:
 
 rule msi_repeat_indel_context_rotated_raw_vis:
   input:
-    "out/msi.summary.rotated.tsv"
+    "out/aggregate/msi.summary.rotated.tsv"
   output:
-    "out/msi.repeat_indel_context_rotated.all.raw.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.raw.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -302,14 +302,14 @@ rule msi_repeat_indel_context_rotated_raw_vis:
 
 rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_sample_norm_vis:
   input:
-    tsv="out/msi.summary.rotated.transcribed.tsv",
+    tsv="out/aggregate/msi.summary.rotated.transcribed.tsv",
   output:
-    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.sample_norm.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.transcribed.sample_norm.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.sample_norm.stderr"
   params:
     samples=config['representative_samples'],
-    threshold=0
+    threshold=0.1
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
     "src/context_heatmap.py --verbose --image {output} --normalize_sample --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -321,14 +321,14 @@ rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_sample_norm_v
 
 rule msi_repeat_indel_context_rotated_complemented_higher_threshold_vis:
   input:
-    tsv="out/msi.summary.rotated.complemented.tsv",
+    tsv="out/aggregate/msi.summary.rotated.complemented.tsv",
   output:
-    "out/msi.repeat_indel_context_rotated.all.representative.complemented.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.complemented.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
   params:
     samples=config['representative_samples'],
-    threshold=0
+    threshold=0.1
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_complemented_higher_threshold_vis.tsv 2>{log.stderr} && "
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_complemented_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -340,14 +340,14 @@ rule msi_repeat_indel_context_rotated_complemented_higher_threshold_vis:
 
 rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis:
   input:
-    tsv="out/msi.summary.rotated.transcribed.tsv",
+    tsv="out/aggregate/msi.summary.rotated.transcribed.tsv",
   output:
-    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.transcribed.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
   params:
     samples=config['representative_samples'],
-    threshold=0
+    threshold=0.1
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < tmp/msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -359,13 +359,13 @@ rule msi_repeat_indel_context_rotated_transcribed_higher_threshold_vis:
 
 rule msi_repeat_indel_context_rotated_transcribed_high_threshold_vis:
   input:
-    "out/msi.summary.rotated.transcribed.tsv"
+    "out/aggregate/msi.summary.rotated.transcribed.tsv"
   output:
-    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.transcribed.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.threshold_0.3.transcribed.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_transcribed_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -376,13 +376,13 @@ rule msi_repeat_indel_context_rotated_transcribed_high_threshold_vis:
 
 rule msi_repeat_indel_context_rotated_high_threshold_vis:
   input:
-    "out/msi.summary.rotated.tsv"
+    "out/aggregate/msi.summary.rotated.tsv"
   output:
-    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.threshold_0.3.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
   params:
-    threshold=0
+    threshold=0.3
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -393,13 +393,13 @@ rule msi_repeat_indel_context_rotated_high_threshold_vis:
 
 rule msi_repeat_indel_context_rotated_log_vis:
   input:
-    "out/msi.summary.rotated.tsv"
+    "out/aggregate/msi.summary.rotated.tsv"
   output:
-    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.log.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.threshold_0.3.log.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
   params:
-    threshold=0
+    threshold=0.3
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} --log < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -410,13 +410,13 @@ rule msi_repeat_indel_context_rotated_log_vis:
 
 rule msi_repeat_indel_context_rotated_vis_norm:
   input:
-    tsv="out/msi.summary.rotated.tsv",
+    tsv="out/aggregate/msi.summary.rotated.tsv",
   output:
-    "out/msi.repeat_indel_context_rotated.all.normalized.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.normalized.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --normalize_sample --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -427,13 +427,13 @@ rule msi_repeat_indel_context_rotated_vis_norm:
 
 rule msi_repeat_indel_context_rotated_representative_vis_norm:
   input:
-    tsv="out/msi.summary.rotated.tsv",
+    tsv="out/aggregate/msi.summary.rotated.tsv",
   output:
-    "out/msi.repeat_indel_context_rotated.all.representative.normalized.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.normalized.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis_representative.stderr"
   params:
-    threshold=0,
+    threshold=0.3,
     samples=config['representative_samples']
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -446,13 +446,13 @@ rule msi_repeat_indel_context_rotated_representative_vis_norm:
 
 rule msi_repeat_indel_context_rotated_representative_vis:
   input:
-    tsv="out/msi.summary.rotated.tsv",
+    tsv="out/aggregate/msi.summary.rotated.tsv",
   output:
-    "out/msi.repeat_indel_context_rotated.all.representative.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis_representative.stderr"
   params:
-    threshold=0,
+    threshold=0.1,
     samples=config['representative_samples']
   shell:
     "src/filter_rows.py --verbose --include {params.samples} <{input.tsv} >tmp/msi_repeat_indel_context_rotated_higher_threshold_vis.tsv 2>{log.stderr} && "
@@ -465,13 +465,13 @@ rule msi_repeat_indel_context_rotated_representative_vis:
 
 rule msi_repeat_indel_context_rotated_vis:
   input:
-    "out/msi.summary.rotated.tsv"
+    "out/aggregate/msi.summary.rotated.tsv"
   output:
-    "out/msi.repeat_indel_context_rotated.all.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context_rotated.all.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_rotated_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -482,13 +482,13 @@ rule msi_repeat_indel_context_rotated_vis:
 
 rule msi_repeat_indel_context_vis:
   input:
-    "out/msi.summary.tsv"
+    "out/aggregate/msi.summary.tsv"
   output:
-    "out/msi.repeat_indel_context.all.heatmap.png"
+    "out/aggregate/msi.repeat_indel_context.all.heatmap.png"
   log:
     stderr="log/msi.repeat_indel_context_vis.stderr"
   params:
-    threshold=0
+    threshold=0.1
   shell:
     "src/context_heatmap.py --verbose --image {output} --normalize_max --prefix rtil_ --threshold {params.threshold} < {input} 2>{log.stderr} && "
     "(IFS=$(echo -en \"\\n\\b\") && for category in $(cut -f3 {input} | sort -u | grep -v Type); do "
@@ -501,7 +501,7 @@ rule msi_repeat_indel_context_vis:
 # note that we use the vcf before germline has been subtracted out
 rule msi_measure:
   input:
-    regions="out/regions.msi.final.exons.bed", # exons only for now
+    regions="out/ref/regions.msi.final.exons.bed", # exons only for now
     vcfs=expand("out/{{tumour}}.msi.{caller}.annotated.vcf", caller=config['msi_callers']), # multiple callers are currently combined (concatenated)
     metadata="cfg/sample-metadata.csv"
   output:
@@ -536,14 +536,16 @@ rule filter_somatic_msi_qual:
     stderr="log/{tumour}.{caller}.filter_somatic_msi_qual.stderr"
   params:
     qual=config['msi_qual'],
+    af=config['msi_af'],
+    dp=config['msi_dp']
   shell:
-    "src/filter_vcf_qual.py --qual {params.qual} < {input.vcf} | src/annotate_af.py --verbose > {output} 2>{log.stderr}"
+    "src/annotate_af.py --verbose < {input.vcf} | src/filter_vcf_qual.py --qual {params.qual} --af {params.af} --dp {params.dp} > {output} 2>{log.stderr}"
 
 rule msi_regions_exons:
   input:
-    "out/regions.msi.final.bed",
+    "out/ref/regions.msi.final.bed",
   output:
-    "out/regions.msi.final.exons.bed",
+    "out/ref/regions.msi.final.exons.bed",
   shell:
     "grep exon < {input} > {output}"
 
@@ -552,14 +554,14 @@ rule common_msi_mutations:
   input:
     expand("out/{tumour}.msi.{{caller}}.annotated.somatic.filtered.vcf", tumour=config['tumours'])
   output:
-    "out/msi.{caller}.common"
+    "out/aggregate/msi.{caller}.common"
   shell:
     "python src/find_common_mutations.py --vcfs {input} --threshold 2 --position_only > {output}"
 
 # annotates vcf files with vep
 #rule msi_vep:
 #  input:
-#    "out/regions.msi.final.bed",
+#    "out/ref/regions.msi.final.bed",
 #    "out/{sample}.msi.{caller}.annotated.vcf"
 #  output:
 #    "out/{sample}.msi.{caller}.annotated.vep.vcf",
@@ -571,10 +573,10 @@ rule common_msi_mutations:
 
 rule msi_cluster_samples_vis:
   input:
-    "out/msi.samples.cluster",
+    "out/aggregate/msi.samples.cluster",
     "cfg/htsdb.csv"
   output:
-    "out/msi.samples.png"
+    "out/aggregate/msi.samples.png"
   log:
     stderr="log/msi_samples_cluster_vis.stderr",
   shell:
@@ -583,11 +585,11 @@ rule msi_cluster_samples_vis:
 # cluster msi on all samples (not just tumour)
 rule msi_cluster_samples:
   input:
-    bed="out/regions.msi.final.exons.bed",
+    bed="out/ref/regions.msi.final.exons.bed",
     categories="cfg/htsdb.csv",
     vcfs=expand("out/{sample}.msi.{caller}.annotated.vcf", sample=config['samples'], caller=config['msi_callers']),
   output:
-    "out/msi.samples.cluster"
+    "out/aggregate/msi.samples.cluster"
   log:
     stderr="log/msi.cluster.samples.stderr",
   shell:
@@ -597,7 +599,7 @@ rule msi_cluster_samples:
 # msi output is list of samples and the degree of MSI found
 rule annotate_msi:
   input:
-    "out/regions.msi.final.bed",
+    "out/ref/regions.msi.final.bed",
     "in/{sample}.{caller}.vcf" # each unfiltered msi_caller
   output:
     "out/{sample}.msi.{caller}.annotated.vcf" # makes a filtered vcf
@@ -609,11 +611,11 @@ rule annotate_msi:
 # add oncogene annotations to msi list
 rule annotate_msi_all_oncogene_regions:
   input:
-    "out/regions.msi.oncogenes.bed", # list of msi regions
-    "out/regions.oncogenes.all.bed", # list of oncogene regions 
+    "out/ref/regions.msi.oncogenes.bed", # list of msi regions
+    "out/ref/regions.oncogenes.all.bed", # list of oncogene regions 
     "cfg/msi.seltarbase.bed", # list of seltarbase regions 
   output:
-    "out/regions.msi.final.bed" # annotated regions
+    "out/ref/regions.msi.final.bed" # annotated regions
   log:
     stderr="log/annotate_bed.stderr",
   shell:
@@ -622,10 +624,10 @@ rule annotate_msi_all_oncogene_regions:
 # add oncogene annotations to msi list
 rule annotate_msi_oncogene_regions:
   input:
-    "out/regions.oncogenes.bed", # list of oncogene regions 
-    "out/regions.msi.bed", # list of msi regions
+    "out/ref/regions.oncogenes.bed", # list of oncogene regions 
+    "out/ref/regions.msi.bed", # list of msi regions
   output:
-    "out/regions.msi.oncogenes.bed" # annotated regions
+    "out/ref/regions.msi.oncogenes.bed" # annotated regions
   log:
     stderr="log/annotate_bed.stderr",
   shell:
@@ -637,9 +639,9 @@ rule make_all_oncogene_regions:
     "out/oncogenes.all.msi", # list of genes 
     config["refseq"], # list of refseq regions
   output:
-    "out/regions.oncogenes.all.bed" # oncogene regions
+    "out/ref/regions.oncogenes.all.bed" # oncogene regions
   shell:
-    "module load bedtools-intel/2.27.1; "
+    "{config[module_bedtools]} && "
     "src/make_bed.py {input[0]} < {input[1]} | sort -k1,1 -k2,2n > {output}" 
 
 
@@ -649,9 +651,9 @@ rule make_oncogene_regions:
     "out/oncogenes.msi", # list of genes 
     config["refseq"], # list of refseq regions
   output:
-    "out/regions.oncogenes.bed" # oncogene regions
+    "out/ref/regions.oncogenes.bed" # oncogene regions
   shell:
-    "module load bedtools-intel/2.27.1; "
+    "{config[module_bedtools]} && "
     "src/make_bed.py {input[0]} < {input[1]} | sort -k1,1 -k2,2n > {output}" 
 
 # make a list of genes relevant to msi for the cancer being studied
@@ -675,9 +677,9 @@ rule make_msi_oncogenes:
 # basic msi stats
 rule bed_stats:
   input:
-    "out/regions.msi.bed"
+    "out/ref/regions.msi.bed"
   output:
-    "out/regions.msi.stats"
+    "out/ref/regions.msi.stats"
   log:
     stderr="log/bed_stats.log"
   shell:
@@ -724,7 +726,7 @@ rule annotate_msi_candidates:
     fiveUTR="out/hg19.exons.5utr",
     ncRNA="out/hg19.exons.ncRNA"
   output:
-    "out/msi.annotated.bed"
+    "out/ref/msi.annotated.bed"
   shell: # TODO this could be more efficient
     "src/annotate.py --name exon {input.msi} < {input.exons} > tmp/msi.exons.bed && " # exons
     "src/annotate.py --name 3UTR tmp/msi.exons.bed < {input.threeUTR} > tmp/msi.3utr.bed && " # 3'
@@ -735,9 +737,9 @@ rule annotate_msi_candidates:
 # limits msi regions by length and repeat type
 rule make_msi_regions:
   input:
-    "out/msi.annotated.bed"
+    "out/ref/msi.annotated.bed"
   output:
-    "out/regions.msi.bed"
+    "out/ref/regions.msi.bed"
   log:
     stderr="log/make_msi_regions.stderr",
   shell:

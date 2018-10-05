@@ -78,7 +78,7 @@ def main(fh, target, categories):
     plt.xlabel('PCA Component 1')
     plt.ylabel('PCA Component 2')
     for i, sample in enumerate(y_all):
-      plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+      plt.annotate(sample, (projection[i, 0], projection[i, 1]), rotation=-30)
     plt.savefig(target.replace('.png', '.pca.png'))
 
     # also write pca as tsv
@@ -115,7 +115,7 @@ def main(fh, target, categories):
     plt.xlabel('t-SNE Component 1')
     plt.ylabel('t-SNE Component 2')
     for i, sample in enumerate(y_all):
-      plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+      plt.annotate(sample, (projection[i, 0], projection[i, 1]), rotation=-30)
     plt.savefig(target.replace('.png', '.tsne.png'))
   except:
     logging.warn('tsne failed for %s', target) # TODO
@@ -170,7 +170,7 @@ def main(fh, target, categories):
           plt.figure(figsize=FIGSIZE)
           plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
           for i, sample in enumerate(y_cat):
-            plt.annotate(sample, (projection[i, 0], projection[i, 1]))
+            plt.annotate(sample, (projection[i, 0], projection[i, 1]), rotation=-30)
           plt.savefig(target.replace('.png', '.{}.pca.png'.format(category)))
 
 

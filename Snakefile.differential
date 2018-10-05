@@ -9,9 +9,9 @@
 # generate a table of samples with which genes are affected for that sample in an msi region 
 rule affected_genes:
   input:
-    "out/msi.cluster.tumours" # Chrom   Begin   End     Annotation      Len     Samples 0151010101_T    0151100011_T...
+    "out/aggregate/msi.cluster.tumours" # Chrom   Begin   End     Annotation      Len     Samples 0151010101_T    0151100011_T...
   output:
-    "out/aggregated/msi.affected_genes.tsv"
+    "out/aggregate/msi.affected_genes.tsv"
   log:
     stderr="log/affected_genes.stderr"
   shell:
@@ -20,9 +20,9 @@ rule affected_genes:
 # merge replicates
 rule merge_replicates:
   input:
-    "out/aggregated/msi.affected_genes.tsv"
+    "out/aggregate/msi.affected_genes.tsv"
   output:
-    "out/aggregated/msi.affected_genes.merged.tsv"
+    "out/aggregate/msi.affected_genes.merged.tsv"
   log:
     stderr="log/merge_replicates.stderr"
   params:
@@ -33,10 +33,10 @@ rule merge_replicates:
 # find what proportion of genes are affected in specified groups of interest
 rule affected_proportion:
   input:
-    "out/aggregated/msi.affected_genes.merged.tsv"
+    "out/aggregate/msi.affected_genes.merged.tsv"
   output:
-    raw="out/aggregated/msi.affected_proportion.tsv",
-    sorted="out/aggregated/msi.affected_proportion.sorted.tsv"
+    raw="out/aggregate/msi.affected_proportion.tsv",
+    sorted="out/aggregate/msi.affected_proportion.sorted.tsv"
   log:
     stderr="log/affected_proportion.stderr"
   params:
@@ -47,9 +47,9 @@ rule affected_proportion:
 
 rule plot_affected:
   input:
-    affected="out/aggregated/msi.affected_proportion.tsv"
+    affected="out/aggregate/msi.affected_proportion.tsv"
   output:
-    "out/aggregated/msi.affected_proportion.png"
+    "out/aggregate/msi.affected_proportion.png"
   log:
     stderr="log/plot_affected.stderr"
   shell:

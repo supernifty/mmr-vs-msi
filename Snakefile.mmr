@@ -2,10 +2,10 @@
 ##### mmr #####
 rule mmr_cluster_cosmic:
   input:
-    summary="out/mmr.summary",
+    summary="out/aggregate/mmr.summary.tsv",
     genes=config["genes_cosmic"]
   output:
-    "out/mmr.cluster.cosmic.png"
+    "out/aggregate/mmr.cluster.cosmic.png"
   log:
     stderr="log/mmr.cluster.cosmic.stderr"
   shell:
@@ -13,10 +13,10 @@ rule mmr_cluster_cosmic:
 
 rule mmr_cluster_mmr:
   input:
-    summary="out/mmr.summary",
+    summary="out/aggregate/mmr.summary.tsv",
     genes=config["genes_mmr"]
   output:
-    "out/mmr.cluster.mmr.png"
+    "out/aggregate/mmr.cluster.mmr.png"
   log:
     stderr="log/mmr.cluster.mmr.stderr"
   shell:
@@ -24,10 +24,10 @@ rule mmr_cluster_mmr:
 
 rule mmr_cluster_cancertype:
   input:
-    summary="out/mmr.summary",
+    summary="out/aggregate/mmr.summary.tsv",
     genes="out/oncogenes.msi"
   output:
-    "out/mmr.cluster.cancertype.png"
+    "out/aggregate/mmr.cluster.cancertype.png"
   log:
     stderr="log/mmr.cluster.cancertype.stderr"
   shell:
@@ -40,7 +40,7 @@ rule mmr_stats:
     expand("out/{tumour}.mmr.{caller}.filter.somatic.rare.vcf", tumour=config['tumours'], caller=config['callers'])
     #expand("out/{tumour}.mmr.hmmcopy.filter.bed", tumour=config['tumours']) # TODO uncomment to enable hmmcopy
   output:
-    "out/mmr.summary"
+    "out/aggregate/mmr.summary.tsv"
   log:
     stderr="log/mmr.summary.stderr",
   shell:
@@ -48,10 +48,10 @@ rule mmr_stats:
 
 rule mmr_stats_just_ddr:
   input:
-    summary="out/mmr.summary",
+    summary="out/aggregate/mmr.summary.tsv",
     genes=config['genes_ddr']
   output:
-    "out/ddr.summary"
+    "out/aggregate/ddr.summary.tsv"
   log:
     stderr="log/ddr.summary.stderr"
   shell:
@@ -60,7 +60,7 @@ rule mmr_stats_just_ddr:
 # remove common
 rule filter_common_mmr:
   input:
-    "out/mmr.{caller}.common",
+    "out/aggregate/mmr.{caller}.common",
     "out/{tumour}.mmr.{caller}.filter.somatic.vcf"
   output:
     "out/{tumour}.mmr.{caller}.filter.somatic.rare.vcf"
@@ -85,7 +85,7 @@ rule common_mmr_mutations:
   input:
     expand("out/{tumour}.mmr.{{caller}}.filter.somatic.vcf", tumour=config['tumours']),
   output:
-    "out/mmr.{caller}.common"
+    "out/aggregate/mmr.{caller}.common"
   shell:
     "src/find_common_mutations.py --vcfs {input} --threshold 2 --position_only > {output}"
 
@@ -103,7 +103,7 @@ rule mmr_filter:
 # annotates vcf files with vep
 rule mmr_vep:
   input:
-    "out/regions.mmr.bed",
+    "out/ref/regions.mmr.bed",
     "in/{sample}.{caller}.vcf"
   output:
     "out/{sample}.mmr.{caller}.vep.vcf"
@@ -117,11 +117,11 @@ rule mmr_vep:
 rule hmmcopy_filter:
   input:
     "in/{sample}.hmmcopy",
-    "out/regions.mmr.bed"
+    "out/ref/regions.mmr.bed"
   output:
     "out/{sample}.mmr.hmmcopy.filter.bed"
   shell:
-    "module load bedtools-intel/2.27.1; "
+    "{config[module_bedtools]} && "
     "bedtools intersect -b {input[0]} -a {input[1]} -wa -wb | awk '{{ if ($8 != 3) print }}' > {output}"
 
 # generates bed regions to filter vcfs on based on the provided genes, and refseq exons
@@ -131,8 +131,8 @@ rule make_mmr_regions:
     refseq=config["refseq"],
     lengths=config["genome_lengths"]
   output:
-    "out/regions.mmr.bed"
+    "out/ref/regions.mmr.bed"
   shell:
-    "module load bedtools-intel/2.27.1; "
+    "{config[module_bedtools]} && "
     "src/make_bed.py {input.genes} < {input.refseq} | sort -k1,1 -k2,2n | bedtools merge -i - -c 4 -o distinct | bedtools slop -b {config[slop]} -i - -g {input.lengths} > {output}"
 

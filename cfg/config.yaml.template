@@ -9,6 +9,10 @@ cosmic: 'reference/cosmic180407.tsv'
 cancer_type: 'prostate'
 slop: 1000
 
+# modules to load
+module_bedtools: 'module load bedtools-intel/2.27.1'
+module_htslib: 'module load htslib-intel/1.5'
+
 # for mmr evaluation (multiple ok)
 callers: [
   'platypus'
@@ -31,6 +35,9 @@ msi_callers: [
   #'pindel'
 ]
 msi_qual: 300
+msi_af: 0.2
+msi_dp: 40
+
 indel_length_cluster: [
   '-100000,-6',
   '-5,-1',

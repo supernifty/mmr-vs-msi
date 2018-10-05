@@ -8,46 +8,47 @@ def germline_samples():
 # final output
 rule all:
   input:
-    "out/msi.summary.tsv",
-    "out/msi.summary.rotated.transcribed.tsv",
-    "out/msi.summary.mini.tsv",
-    "out/msi.measure.summary",
-    "out/msi.cluster.tumours",
-    "out/msi.primaries.cluster",
-    "out/msi.blood.cluster",
-    "out/msi.tumours.png",
-    "out/msi.samples.png",
-    expand("out/msi.cluster.{range}.tsv", range=config['indel_length_cluster']),
-    expand("out/msi.cluster.{range}.png", range=config['indel_length_cluster']),
-    expand("out/msi.{caller}.common", caller=config['msi_callers']),
-    expand("out/mmr.{caller}.common", caller=config['callers']),
-    "out/mmr.cluster.cosmic.png",
-    "out/mmr.cluster.mmr.png",
-    "out/mmr.cluster.cancertype.png",
-    "out/regions.msi.stats",
-    "out/msi.repeat_context.all.heatmap.png",
-    "out/msi.indel_context.all.heatmap.png",
-    "out/msi.repeat_indel_context.all.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.heatmap.png",
-    "out/msi.repeat_context_emast.all.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.raw.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.transcribed.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.threshold_0.3.log.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.representative.transcribed.sample_norm.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.representative.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.representative.complemented.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.sample_norm.heatmap.png",
-    "out/msi.repeat_context.all.rotated.transcribed.heatmap.png",
-    "out/msi.repeat_context.all.rotated.transcribed.sample_norm.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.normalized.heatmap.png",
-    "out/msi.repeat_indel_context_rotated.all.representative.normalized.heatmap.png",
-    "out/msi.unique.tsv",
-    "out/ddr.summary",
-    "out/mutational_signatures.tsv", # somatic mutational signatures
-    "out/mutational_signatures_germline.tsv", # germline mutational signatures
-    "out/aggregated/msi.affected_proportion.png" # comparing groups
+    "out/aggregate/msi.summary.tsv",
+    "out/aggregate/msi.summary.rotated.transcribed.tsv",
+    "out/aggregate/msi.summary.mini.tsv",
+    "out/aggregate/msi.measure.summary",
+    "out/aggregate/msi.cluster.tumours",
+    "out/aggregate/msi.primaries.cluster",
+    "out/aggregate/msi.blood.cluster",
+    "out/aggregate/msi.tumours.png",
+    "out/aggregate/msi.samples.png",
+    expand("out/aggregate/msi.cluster.{range}.tsv", range=config['indel_length_cluster']),
+    expand("out/aggregate/msi.cluster.{range}.png", range=config['indel_length_cluster']),
+    expand("out/aggregate/msi.{caller}.common", caller=config['msi_callers']),
+    expand("out/aggregate/mmr.{caller}.common", caller=config['callers']),
+    "out/aggregate/mmr.cluster.cosmic.png",
+    "out/aggregate/mmr.cluster.mmr.png",
+    "out/aggregate/mmr.cluster.cancertype.png",
+    "out/ref/regions.msi.stats",
+    "out/aggregate/msi.repeat_context.all.heatmap.png",
+    "out/aggregate/msi.indel_context.all.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context.all.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.heatmap.png",
+    "out/aggregate/msi.repeat_context_emast.all.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.raw.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.threshold_0.3.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.threshold_0.3.transcribed.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.threshold_0.3.log.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.transcribed.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.transcribed.sample_norm.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.complemented.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.sample_norm.heatmap.png",
+    "out/aggregate/msi.repeat_context.all.rotated.transcribed.heatmap.png",
+    "out/aggregate/msi.repeat_context.all.rotated.transcribed.sample_norm.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.normalized.heatmap.png",
+    "out/aggregate/msi.repeat_indel_context_rotated.all.representative.normalized.heatmap.png",
+    "out/aggregate/msi.unique.tsv",
+    "out/aggregate/ddr.summary.tsv",
+    "out/aggregate/mutational_signatures.tsv", # somatic mutational signatures
+    "out/aggregate/mutational_signatures_germline.tsv", # germline mutational signatures
+    "out/aggregate/msi.affected_proportion.png", # comparing groups
+    "out/aggregate/mutations.summary.tsv"
 
 ##### msi #####
 include: 'Snakefile.msi'
@@ -60,7 +61,7 @@ rule count_mutations:
   input:
     expand("in/{sample}.{caller}.vcf", sample=config['samples'], caller=config['callers'])
   output:
-    "out/mutations.summary"
+    "out/aggregate/mutations.summary.tsv"
   log:
     stderr="log/count_mutations.stderr",
   shell:
@@ -102,7 +103,7 @@ rule mutational_signature:
     af=config["snv_af"],
     dp=config["snv_dp"]
   shell:
-    "(module load htslib-intel/1.5 && "
+    "({config[module_htslib]} && "
     "src/filter_af.py --sample TUMOR --af {params.af} --dp {params.dp} < {input.vcf} | bgzip > tmp/{wildcards.tumour}.filter.vcf.gz && "
     "python software/mutational_signature-0.1/count.py --genome {input.reference} --vcf tmp/{wildcards.tumour}.filter.vcf.gz > out/{wildcards.tumour}.mutational_signature.counts && "
     "python software/mutational_signature-0.1/plot.py out/{wildcards.tumour}.mutational_signature.png < out/{wildcards.tumour}.mutational_signature.counts && "
@@ -112,7 +113,7 @@ rule combine_mutational_signatures:
   input:
     expand("out/{tumour}.mutational_signature.tumour.exposures", tumour=config['tumours']),
   output:
-    "out/mutational_signatures.tsv"
+    "out/aggregate/mutational_signatures.tsv"
   shell:
     "src/combine_tsv.py {input} | sed 's/^out\\/\\(.*\)\\.mutational_signature\\.tumour\\.exposures/\\1/' > {output}"
 
@@ -129,7 +130,7 @@ rule mutational_signature_germline:
     af=config["snv_af"],
     dp=config["snv_dp"]
   shell:
-    "(module load htslib-intel/1.5 && "
+    "({config[module_htslib]} && "
     "src/filter_af.py --sample {wildcards.germline} --af {params.af} --dp {params.dp} < {input.vcf} | bgzip > tmp/{wildcards.germline}.filter.vcf.gz && "
     "python software/mutational_signature-0.1/count.py --genome {input.reference} --vcf tmp/{wildcards.germline}.filter.vcf.gz > out/{wildcards.germline}.mutational_signature.counts && "
     "python software/mutational_signature-0.1/plot.py out/{wildcards.germline}.mutational_signature.png < out/{wildcards.germline}.mutational_signature.counts && "
@@ -139,7 +140,7 @@ rule combine_mutational_signatures_germline:
   input:
     expand("out/{germline}.mutational_signature.germline.exposures", germline=germline_samples()),
   output:
-    "out/mutational_signatures_germline.tsv"
+    "out/aggregate/mutational_signatures_germline.tsv"
   shell:
     "src/combine_tsv.py {input} | sed 's/^out\\/\\(.*\)\\.mutational_signature\\.germline\\.exposures/\\1/' > {output}"
 

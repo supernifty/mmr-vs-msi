@@ -17,7 +17,7 @@ plt.rc('savefig', dpi=300)
 
 import numpy as np
 
-FIGSIZE=(24,24)
+FIGSIZE=(12,12)
 
 def rand_jitter(arr):
     stdev = .03 * (max(arr)-min(arr))
@@ -53,12 +53,15 @@ def main(output, labels, cosmic_fn):
   ys = rand_jitter(ys)
 
   plt.scatter(xs, ys, c=pvalues, alpha=0.5, cmap='jet_r')
-  plt.title('Comparison of proportion of samples containing a mutation by gene')
-  plt.xlabel('Proportion of samples affected in group 1 (MMRd)')
-  plt.ylabel('Proportion of samples affected in group 2 (MMRp)')
+  plt.title('Proportion of tumours with exonic microsatellite INDEL by gene (MMR proficient versus MMR deficient)')
+  plt.xlabel('Proportion of MMR deficient tumours with exonic microsatellite INDEL')
+  plt.ylabel('Proportion of MMR proficient tumours with exonic microsatellite INDEL')
   plt.xlim(-0.1, 1.1)
   plt.ylim(-0.1, 1.1)
-  plt.colorbar()
+
+  cb = plt.colorbar()
+  cb.ax.get_yaxis().labelpad = 15
+  cb.ax.set_ylabel('FDR corrected p-value of significant difference', rotation=270)
 
   plt.annotate("", xy=(0, 0), xycoords='data', xytext=(1, 1), textcoords='data',
               arrowprops=dict(arrowstyle="-",

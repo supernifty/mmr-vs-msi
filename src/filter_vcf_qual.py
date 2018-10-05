@@ -11,15 +11,17 @@ import cyvcf2
 
 UUIDS="cfg/samples.uuids"
 
-def main(qual):
-  logging.info('reading vcf from stdin. qual filter %i', qual)
+def main(qual, af, dp):
+  logging.info('reading vcf from stdin. qual filter %i af filter %f dp filter %i', qual, af, dp)
+
   vcf_in = cyvcf2.VCF('-')
   sys.stdout.write(vcf_in.raw_header)
 
   allowed = 0
   denied = 0
   for variant in vcf_in:
-    ok = variant.QUAL is None or variant.QUAL >= qual
+    ok = (variant.QUAL is None or variant.QUAL >= qual) and variant.INFO["AF"] >= af and variant.INFO["DP"] >= dp
+
     if ok:
       sys.stdout.write(str(variant))
       allowed += 1
@@ -33,11 +35,13 @@ def main(qual):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Extract samples from VCF')
-  parser.add_argument('--qual', required=True, type=int, default=-1, help='minimum sample quality')
+  parser.add_argument('--qual', required=False, type=int, default=-1, help='minimum sample quality')
+  parser.add_argument('--af', required=False, type=float, default=-1, help='minimum af')
+  parser.add_argument('--dp', required=False, type=int, default=-1, help='minimum dp')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   args = parser.parse_args()
   if args.verbose:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
-  main(args.qual)
+  main(args.qual, args.af, args.dp)
