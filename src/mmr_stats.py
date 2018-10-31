@@ -7,6 +7,7 @@ import argparse
 import collections
 import logging
 import os
+import os.path
 import sys
 
 import cyvcf2
@@ -39,10 +40,12 @@ def main(show_all, files):
     caller = os.path.basename(f).split('.')[2]
     if f.endswith('.vcf'):
       for variant in cyvcf2.VCF(f):
-        gene = variant.INFO.get('CSQ').split('|')[gene_index]
-        of_interest[sample].add(gene)
-        gene_count['{}|{}|{}'.format(sample, gene, caller)] += 1
-        gene_callers.add('{}|{}'.format(gene, caller))
+        csq = variant.INFO.get('CSQ')
+        if csq is not None:
+          gene = variant.INFO.get('CSQ').split('|')[gene_index]
+          of_interest[sample].add(gene)
+          gene_count['{}|{}|{}'.format(sample, gene, caller)] += 1
+          gene_callers.add('{}|{}'.format(gene, caller))
         sample_count[sample] += 1
     elif f.endswith('.bed'):
       for line in open(f, 'r'):
@@ -70,9 +73,10 @@ def main(show_all, files):
     htsdb[fields[0]] = fields
 
   stain = collections.defaultdict(str)
-  for line in open(IHC_METADATA, 'r'):
-    fields = line.strip('\n').split('\t')
-    stain[fields[1]] = fields[2] # sample = status
+  if os.path.exists(IHC_METADATA):
+    for line in open(IHC_METADATA, 'r'):
+      fields = line.strip('\n').split('\t')
+      stain[fields[1]] = fields[2] # sample = status
 
   # overall summary
   sys.stdout.write('VariantCount\tNumberOfSamples\n{}'.format('\n'.join([ '{}\t{}'.format(count, stats[count]) for count in sorted(stats)])))

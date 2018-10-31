@@ -23,8 +23,12 @@ def main():
   for variant in vcf_in:
     ok = True
 
+    if 'AF' in variant.FORMAT: # tcga
+      af = variant.format('AF')[0][0]
+      dp = variant.INFO['DP']
+
     # pindel
-    if all([x in variant.FORMAT for x in ('PP', 'NP', 'PR', 'NR')]):
+    elif all([x in variant.FORMAT for x in ('PP', 'NP', 'PR', 'NR')]):
       dp = variant.format('PR')[0][0] + variant.format('NR')[0][0]
       af = (variant.format('PP')[0][0] + variant.format('NP')[0][0]) / dp
       variant.INFO["AF"] = af

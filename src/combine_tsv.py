@@ -3,6 +3,8 @@
 import collections
 import sys
 
+DEFAULT="0"
+
 keys = set()
 vals = collections.defaultdict(dict)
 for filename in sys.argv[1:]:
@@ -21,6 +23,6 @@ for filename in sorted(sys.argv[1:]):
     if key in vals[filename]:
       line.append(vals[filename][key])
     else:
-      line.append('')
+      line.append(DEFAULT)
   sys.stdout.write('\t'.join(line))
   sys.stdout.write('\n')

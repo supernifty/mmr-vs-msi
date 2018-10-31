@@ -23,7 +23,7 @@ def rand_jitter(arr):
     stdev = .03 * (max(arr)-min(arr))
     return arr + np.random.randn(len(arr)) * stdev
 
-def main(output, labels, cosmic_fn):
+def main(output, labels, cosmic_fn, group1_name, group2_name):
   cosmic = set()
   if cosmic_fn is not None:
     logging.info('reading cosmic...')
@@ -49,13 +49,17 @@ def main(output, labels, cosmic_fn):
     pvalues.append(float(row[9])) # adjusted p value
     ls.append(row[0])
 
+  if len(xs) == 0:
+    logging.warn("nothing to plot")
+    sys.exit(0)
+
   xs = rand_jitter(xs)
   ys = rand_jitter(ys)
 
   plt.scatter(xs, ys, c=pvalues, alpha=0.5, cmap='jet_r')
-  plt.title('Proportion of tumours with exonic microsatellite INDEL by gene (MMR proficient versus MMR deficient)')
-  plt.xlabel('Proportion of MMR deficient tumours with exonic microsatellite INDEL')
-  plt.ylabel('Proportion of MMR proficient tumours with exonic microsatellite INDEL')
+  plt.title('Proportion of tumours with exonic microsatellite INDEL by gene ({} versus {})'.format(group1_name, group2_name))
+  plt.xlabel('Proportion of {} tumours with exonic microsatellite INDEL'.format(group1_name))
+  plt.ylabel('Proportion of {} tumours with exonic microsatellite INDEL'.format(group2_name))
   plt.xlim(-0.1, 1.1)
   plt.ylim(-0.1, 1.1)
 
@@ -86,6 +90,8 @@ def main(output, labels, cosmic_fn):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Plot affected proportions between groups')
   parser.add_argument('--output', default='affected.png', help='output file')
+  parser.add_argument('--group1_name', help='group1 label')
+  parser.add_argument('--group2_name', help='group2 label')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   parser.add_argument('--labels', action='store_true', help='label genes')
   parser.add_argument('--cosmic', required=False, help='cosmic tsv')
@@ -95,4 +101,4 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.output, args.labels, args.cosmic)
+  main(args.output, args.labels, args.cosmic, args.group1_name, args.group2_name)

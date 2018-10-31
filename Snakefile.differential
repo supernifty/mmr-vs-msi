@@ -53,5 +53,5 @@ rule plot_affected:
   log:
     stderr="log/plot_affected.stderr"
   shell:
-    "src/plot_affected.py --labels --verbose --output {output} <{input.affected} 2>{log.stderr}"
+    "src/plot_affected.py --labels --verbose --output {output} --group1_name '{config[group1_name]}' --group2_name '{config[group2_name]}' <{input.affected} 2>{log.stderr}"
 

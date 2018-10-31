@@ -6,7 +6,7 @@
     make_bed genes.txt < ucsc.out > bed
 '''
 
-REMOVE_CHR=True
+REMOVE_CHR=False
 
 import sys
 

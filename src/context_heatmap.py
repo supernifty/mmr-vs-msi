@@ -27,6 +27,12 @@ sns.set(rc=rc)
 
 import scipy.cluster.hierarchy
 
+def short_sample(sample, tcga):
+  if tcga:
+    return '-'.join(sample.split('-')[1:3])
+  else:
+    return sample
+
 def rotate_repeat(r):
   '''
     normalize repeats to start from earliest base e.g. GCAA -> AAGC
@@ -38,7 +44,7 @@ def rotate_repeat(r):
 
   return r[best:] + r[:best]
 
-def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=False, min_len=0, max_len=1000, highlight=None, normalize_custom=None, threshold_proportion=0, rotate_context=False, normalize_sample=False):
+def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=False, min_len=0, max_len=1000, highlight=None, normalize_custom=None, threshold_proportion=0, rotate_context=False, normalize_sample=False, tcga=False, exclude_empty=False):
   logging.info('reading from stdin...')
   header = None
   df = None
@@ -71,9 +77,9 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
 
     if category is None or category == fields[header.index('Type')]:
       if category is None:
-        sample = '{} {} {}'.format(fields[header.index('Sample')], fields[header.index('Patient')], fields[header.index('Type')])
+        sample = '{} {} {}'.format(short_sample(fields[header.index('Sample')], tcga), short_sample(fields[header.index('Patient')], tcga), fields[header.index('Type')])
       else:
-        sample = fields[header.index('Sample')]
+        sample = short_sample(fields[header.index('Sample')], tcga)
 
       if highlight is not None and fields[header.index('Sample')] in highlight:
         sample = '***{}***'.format(sample)
@@ -91,6 +97,10 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
           final_features[target] += feature
       else:
         final_features = row_features
+
+      if exclude_empty and sum(final_features) == 0:
+        logging.info('skipping %s with no features', sample)
+        continue
 
       df = df.append(pd.Series(data=[sample] + final_features, index=df.columns), ignore_index=True)
     else:
@@ -151,10 +161,11 @@ def main(target_image, in_fh, category, prefix='rt_', log=False, normalize_max=F
     sys.exit(0)
 
   logging.info('plotting...')
+  
   try:
     plot = sns.clustermap(df, figsize=(max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[1] / 10), max(FIGSIZE_FACTOR * 8, FIGSIZE_FACTOR * df.shape[0] / 10)))
     plot.savefig(target_image)
-  except FloatingPointError as e: # TODO
+  except: # TODO sometimes get floating point or other exceptions if not enough samples
     logging.warn('sns.clustermap failed')
     open(target_image, 'a').close()
     sys.exit(0)
@@ -176,10 +187,12 @@ if __name__ == '__main__':
   parser.add_argument('--highlight', required=False, nargs='+', help='samples to highlight')
   parser.add_argument('--threshold', required=False, default=0, type=float, help='minimum mutation count as a proportion of sample count')
   parser.add_argument('--rotate_context', action='store_true', help='rotate contexts')
+  parser.add_argument('--tcga', action='store_true', help='tcga settings')
+  parser.add_argument('--exclude_empty', action='store_true', help='skip empty samples')
   args = parser.parse_args()
   if args.verbose:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(args.image, sys.stdin, args.category, args.prefix, args.log, args.normalize_max, args.min_len, args.max_len, args.highlight, args.normalize_custom, args.threshold, args.rotate_context, args.normalize_sample)
+  main(args.image, sys.stdin, args.category, args.prefix, args.log, args.normalize_max, args.min_len, args.max_len, args.highlight, args.normalize_custom, args.threshold, args.rotate_context, args.normalize_sample, args.tcga, args.exclude_empty)

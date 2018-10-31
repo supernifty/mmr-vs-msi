@@ -12,7 +12,7 @@ def get_fields(values):
     result[key] = val
   return result
 
-def main(src, target, minlen, maxlen, minrepeat, maxrepeat, exons_only):
+def main(src, target, minlen, maxlen, minrepeat, maxrepeat, exons_only, remove_chr):
   allowed = 0
   denied = 0
   for idx, line in enumerate(src):
@@ -22,7 +22,7 @@ def main(src, target, minlen, maxlen, minrepeat, maxrepeat, exons_only):
       if minrepeat <= len(params['repeat']) <= maxrepeat:
         if not exons_only or 'exon' in params:
           allowed += 1
-          if line.startswith('chr'):
+          if remove_chr and line.startswith('chr'):
             line = line[3:]
           target.write(line)
         else:
@@ -44,5 +44,6 @@ if __name__ == '__main__':
   parser.add_argument('--minrepeat', type=int, default=1)
   parser.add_argument('--maxrepeat', type=int, default=4)
   parser.add_argument('--exons_only', action='store_true')
+  parser.add_argument('--remove_chr', action='store_true')
   args = parser.parse_args()
-  main(sys.stdin, sys.stdout, minlen=args.minlen, maxlen=args.maxlen, minrepeat=args.minrepeat, maxrepeat=args.maxrepeat, exons_only=args.exons_only)
+  main(sys.stdin, sys.stdout, minlen=args.minlen, maxlen=args.maxlen, minrepeat=args.minrepeat, maxrepeat=args.maxrepeat, exons_only=args.exons_only, remove_chr=args.remove_chr)

@@ -50,6 +50,8 @@ indel_length_cluster: [
   '-5,5',
   '-100000,100000'
 ]
+
+context_heatmap_threshold: 0.01
 representative_samples: [
   SAMPLES
 ]
@@ -60,10 +62,12 @@ tumours: [
   TUMOURS
 ]
 
+group1_name: 'MMRd'
 group1: [
   TUMOURS
 ]
 
+group2_name: 'MMRp'
 group2: [
   TUMOURS
 ]

@@ -49,7 +49,7 @@ def main(sample, af_threshold, dp_threshold, ignore_filter):
     try:
       af = variant.format("AF")
       if af is not None:
-        af = [sample_id][0] 
+        af = af[sample_id][0] 
     except:
       try:
         af = variant.INFO["AF"]
@@ -57,13 +57,14 @@ def main(sample, af_threshold, dp_threshold, ignore_filter):
         af = None
 
     if af is not None and af < af_threshold:
+      print(af)
       skipped_af += 1
       continue
 
     allowed += 1
     sys.stdout.write(str(variant))
 
-  logging.info('processed %i variants. no pass %i. low af %i. low dp %i. allowed %i', variant_count + 1, skipped_pass, skipped_af, skipped_af, allowed)
+  logging.info('processed %i variants. no pass %i. low af %i. low dp %i. allowed %i', variant_count + 1, skipped_pass, skipped_af, skipped_dp, allowed)
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Filter VCF')

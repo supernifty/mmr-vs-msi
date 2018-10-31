@@ -111,7 +111,10 @@ rule mmr_vep:
     stderr="log/annotate.{sample}.{caller}.stderr",
     stdout="log/annotate.{sample}.{caller}.stdout"
   shell:
-    "src/annotate.sh {config[genome]} {input} {output} 1>{log.stdout} 2>{log.stderr}"
+    #"src/annotate.sh {config[genome]} {input} {output} 1>{log.stdout} 2>{log.stderr}" # vep annotation
+    # TODO instead just filter on mmr regions
+    "{config[module_bedtools]} && "
+    "bedtools intersect -b {input[0]} -a {input[1]} -header > {output}"
 
 # hmmcopy
 rule hmmcopy_filter:

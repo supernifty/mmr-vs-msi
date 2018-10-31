@@ -20,7 +20,15 @@ def main(qual, af, dp):
   allowed = 0
   denied = 0
   for variant in vcf_in:
-    ok = (variant.QUAL is None or variant.QUAL >= qual) and variant.INFO["AF"] >= af and variant.INFO["DP"] >= dp
+    try:
+      variant_af = variant.INFO["AF"]
+    except KeyError:
+      try:
+        variant_af = variant.format("AF")
+      except:
+        variant_af = 1.0
+
+    ok = (variant.QUAL is None or variant.QUAL >= qual) and variant_af >= af and variant.INFO["DP"] >= dp
 
     if ok:
       sys.stdout.write(str(variant))

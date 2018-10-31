@@ -23,41 +23,57 @@ import sklearn.manifold
 import sklearn.metrics
 
 # large
-#FIGSIZE=(36,36)
-#FIGSIZE_TREE=(30,12)
-#matplotlib.rcParams.update({'font.size': 36})
+FIGSIZE=(36,36)
+FIGSIZE_TREE=(30,12)
+matplotlib.rcParams.update({'font.size': 24})
 
 # normal
-FIGSIZE=(12,12)
-FIGSIZE_TREE=(18,12)
-matplotlib.rcParams.update({'font.size': 18})
+#FIGSIZE=(12,12)
+#FIGSIZE_TREE=(18,12)
+#matplotlib.rcParams.update({'font.size': 12})
 
-def main(fh, target, categories):
+def short_sample(sample, tcga):
+  if tcga:
+    return '-'.join(sample.split('-')[1:3])
+  else:
+    return sample
+
+def main(fh, target, categories, tcga, exclude_empty):
   logging.info('reading cluster results from stdin...')
 
   vcf_categories = collections.defaultdict(set)
   sample_categories = {}
+  category_list = []
   # "CMHS376","CMHP153","PP102_TURPBX","Primary","Library","ContEst","","Inferred barcode"
   if categories is not None:
     with open(categories, 'rt') as csvfile:
       for row in csv.reader(csvfile):
         vcf_categories[row[3]].add(row[0])
         sample_categories[row[0]] = row[3]
+        if row[3] not in category_list:
+          category_list.append(row[3])
 
   #Chrom   Begin   End     Annotation      Len     Samples CMHS1   CMHS101 CMHS104 CMHS105 CMHS106 CMHS107 CMHS109 CMHS110...
   data = pd.read_csv(fh, sep='\t', dtype={'Chrom': object, 'Begin': int, 'End': int, 'Annotation': object, 'Len': int, 'Samples': int})
   logging.debug('input data has %i rows and %i columns', data.shape[0], data.shape[1])
 
   X = data[:-1].T[6:] # skip the last line; each sample is a row
-  y = data.columns.values[6:] # skip Chrom..Samples
+  y = data.columns.values[6:] # skip Chrom..Samples -> list of samples
+
+  if exclude_empty:
+    non_empty_samples = X.sum(axis=1) != 0
+    y = y[non_empty_samples]
+    X = X[non_empty_samples]
 
   if len(sample_categories) > 0:
-    y_all = ['{} {}'.format(s, sample_categories[s]) for s in y]
+    y_all = ['{} {}'.format(short_sample(s, tcga), sample_categories[s]) for s in y]
+    y_colours = [category_list.index(sample_categories[s]) / len(category_list) for s in y]
   else:
-    y_all = y
+    y_all = [short_sample(s, tcga) for s in y]
+    y_colours = [1.0 for s in y]
 
   logging.debug('X has %i rows and %i columns: %s', X.shape[0], X.shape[1], X.head())
-  logging.debug('y is %s', y)
+  logging.debug('y is %s', y_all)
 
   # distance test
   #d = 0
@@ -73,7 +89,7 @@ def main(fh, target, categories):
   try:
     projection = pca.fit_transform(X)
     plt.figure(figsize=FIGSIZE)
-    plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
+    plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5, c=y_colours)
     plt.title('PCA plot based on indel mutations in microsatellite regions')
     plt.xlabel('PCA Component 1')
     plt.ylabel('PCA Component 2')
@@ -105,20 +121,20 @@ def main(fh, target, categories):
   #plt.savefig(target.replace('.png', '.mds.png'))
 
   # tsne
-  try:
-    logging.info('tsne...')
-    tsne = sklearn.manifold.TSNE(n_components=2, init='pca', random_state=0)
-    projection = tsne.fit_transform(X)
-    plt.figure(figsize=FIGSIZE)
-    plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
-    plt.title('t-SNE plot based on indel mutations in microsatellite regions')
-    plt.xlabel('t-SNE Component 1')
-    plt.ylabel('t-SNE Component 2')
-    for i, sample in enumerate(y_all):
-      plt.annotate(sample, (projection[i, 0], projection[i, 1]), rotation=-30)
-    plt.savefig(target.replace('.png', '.tsne.png'))
-  except:
-    logging.warn('tsne failed for %s', target) # TODO
+  #try:
+  #  logging.info('tsne...')
+  #  tsne = sklearn.manifold.TSNE(n_components=2, init='pca', random_state=0)
+  #  projection = tsne.fit_transform(X)
+  #  plt.figure(figsize=FIGSIZE)
+  #  plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
+  #  plt.title('t-SNE plot based on indel mutations in microsatellite regions')
+  #  plt.xlabel('t-SNE Component 1')
+  #  plt.ylabel('t-SNE Component 2')
+  #  for i, sample in enumerate(y_all):
+  #    plt.annotate(sample, (projection[i, 0], projection[i, 1]), rotation=-30)
+  #  plt.savefig(target.replace('.png', '.tsne.png'))
+  #except:
+  #  logging.warn('tsne failed for %s', target) # TODO
 
 
   #km = sklearn.cluster.KMeans(n_clusters=4, init='k-means++', max_iter=100, n_init=1, verbose=True)
@@ -127,24 +143,30 @@ def main(fh, target, categories):
   logging.info('hierarchy...')
 
   # hierarchical cluster
-  Z = scipy.cluster.hierarchy.linkage(X, method='ward', metric='euclidean')
+  try:
+    Z = scipy.cluster.hierarchy.linkage(X, method='ward', metric='euclidean')
 
-  logging.info('plotting...')
-  plt.figure(figsize=FIGSIZE_TREE)
-  plt.title('Hierarchical Clustering Dendrogram - All samples')
-  plt.xlabel('sample index')
-  plt.ylabel('distance')
-  scipy.cluster.hierarchy.dendrogram(
-    Z,
-    leaf_rotation=90.,  # rotates the x axis labels
-    leaf_font_size=8.,  # font size for the x axis labels
-    labels=y_all
-  )
-  plt.savefig(target)
+    logging.info('plotting...')
+    plt.figure(figsize=FIGSIZE_TREE)
+    plt.title('Hierarchical Clustering Dendrogram - All samples')
+    plt.xlabel('sample index')
+    plt.ylabel('distance')
+    scipy.cluster.hierarchy.dendrogram(
+      Z,
+      leaf_rotation=90.,  # rotates the x axis labels
+      leaf_font_size=8.,  # font size for the x axis labels
+      labels=y_all
+    )
+    plt.savefig(target)
+  except:
+    logging.warn('failed to generate dendrogram')
+    open(target, 'a').close()
 
   if len(vcf_categories) > 0:
     for category in vcf_categories:
       y_cat = [s for s in y if s in vcf_categories[category]]
+      y_cat_labels = [short_sample(s, tcga) for s in y if s in vcf_categories[category]]
+      
       if len(y_cat) > 1:
         logging.info('clustering %i samples in %s', len(y_cat), category)
         logging.debug(list(y_cat))
@@ -158,7 +180,7 @@ def main(fh, target, categories):
           Z,
           leaf_rotation=90.,  # rotates the x axis labels
           leaf_font_size=8.,  # font size for the x axis labels
-          labels=y_cat
+          labels=y_cat_labels
         )
         plt.savefig(target.replace('.png', '.{}.png'.format(category)))
 
@@ -169,10 +191,9 @@ def main(fh, target, categories):
           projection = pca.fit_transform(X_cat)
           plt.figure(figsize=FIGSIZE)
           plt.scatter(projection[:, 0], projection[:, 1], alpha=0.5)
-          for i, sample in enumerate(y_cat):
+          for i, sample in enumerate(y_cat_labels):
             plt.annotate(sample, (projection[i, 0], projection[i, 1]), rotation=-30)
           plt.savefig(target.replace('.png', '.{}.pca.png'.format(category)))
-
 
           # also write pca as tsv
           pca_tsv = target.replace('.png', '.{}.pca.tsv'.format(category))
@@ -193,10 +214,12 @@ if __name__ == '__main__':
   parser.add_argument('--verbose', action='store_true', help='more logging')
   parser.add_argument('--image', default='cluster.png', help='dend file')
   parser.add_argument('--categories', required=False, help='CSV of additional info about the sample')
+  parser.add_argument('--exclude_empty', action='store_true', help='exclude samples with no mutations')
+  parser.add_argument('--tcga', action='store_true', help='use short sample names using tcga')
   args = parser.parse_args()
   if args.verbose:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(sys.stdin, args.image, args.categories)
+  main(sys.stdin, args.image, args.categories, args.tcga, args.exclude_empty)

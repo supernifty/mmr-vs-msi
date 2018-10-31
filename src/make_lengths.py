@@ -9,10 +9,12 @@ import sys
 
 chrom = None
 length = 0
+seen = set()
 for idx, line in enumerate(sys.stdin):
   if line.startswith('>'):
-    if chrom is not None:
+    if chrom is not None and chrom not in seen:
       sys.stdout.write('{chrom}\t{length}\n'.format(chrom=chrom, length=length))
+      seen.add(chrom)
     chrom = line.strip('\n').split(' ')[0][1:]
     length = 0
   else:

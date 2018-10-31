@@ -92,3 +92,12 @@ run.sh # kicks off the snakemake script
 * cadd score
 * filter on dbsnp, 1000GP, GnomAd
 * mutational signatures
+
+## TCGA
+```
+mkdir -p reference
+wget https://api.gdc.cancer.gov/data/62f23fad-0f24-43fb-8844-990d531947cf
+wget https://api.gdc.cancer.gov/data/964cbdac-1043-4fae-b068-c3a65d992f6b
+tar xvfz 62f23fad-0f24-43fb-8844-990d531947cf
+tar xvfz 964cbdac-1043-4fae-b068-c3a65d992f6b
+```

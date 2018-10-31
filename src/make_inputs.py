@@ -10,13 +10,13 @@ import sys
 
 LOGGING_LEVEL=logging.DEBUG
 
-METADATA='cfg/sample-metadata-crc.csv'
+METADATA='cfg/sample-metadata.csv'
 SAMPLES='cfg/samples'
 TUMOURS='cfg/tumours'
 
 #INCLUDE=('make_uuids', 'varscan', 'varscan_indel', 'gridss', 'hmmcopy', 'pindel', 'platypus', 'platypus_crc', 'strelka', 'strelka_indel', 'caveman', 'config')
-INCLUDE=('strelka', 'strelka_indel', 'config')
-#INCLUDE=('config',)
+#INCLUDE=('strelka', 'strelka_indel', 'config')
+INCLUDE=('config',)
 
 def run(cmd):
   logging.debug('executing "{}"...'.format(cmd))

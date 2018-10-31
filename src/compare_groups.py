@@ -52,13 +52,13 @@ def main(group1_list, group2_list):
     if count[gene]['1_affected'] + count[gene]['1_unaffected'] > 0:
       g1_prop = count[gene]['1_affected'] / (count[gene]['1_affected'] + count[gene]['1_unaffected'])
     else:
-      logging.warn('Gene {} has no samples in group 1', gene)
+      logging.warn('Gene %s has no samples in group 1', gene)
       continue
 
     if count[gene]['2_affected'] + count[gene]['2_unaffected'] > 0:
       g2_prop = count[gene]['2_affected'] / (count[gene]['2_affected'] + count[gene]['2_unaffected'])
     else:
-      logging.warn('Gene {} has no samples in group 2', gene)
+      logging.warn('Gene %s has no samples in group 2', gene)
       continue
 
     contingency = [[count[gene]['1_affected'], count[gene]['2_affected']], [count[gene]['1_unaffected'], count[gene]['2_unaffected']]]
@@ -70,8 +70,11 @@ def main(group1_list, group2_list):
     pvalues.append(p_value)
     result.append('{}\t{}\t{}\t{:.3f}\t{}\t{}\t{:.3f}\t{:.3f}\t{:.7f}'.format(gene, count[gene]['1_affected'], count[gene]['1_unaffected'], g1_prop, count[gene]['2_affected'], count[gene]['2_unaffected'], g2_prop, g1_prop - g2_prop, p_value))
 
-  logging.info('calculating adjusted p-values...')
-  adjusteds = statsmodels.stats.multitest.multipletests(pvalues, method='fdr_bh')[1]
+  logging.info('calculating adjusted p-values %s...', str(pvalues))
+  if len(pvalues) > 0:
+    adjusteds = statsmodels.stats.multitest.multipletests(pvalues, method='fdr_bh')[1]
+  else:
+    adjusteds = []
   
   logging.info('writing results...')
   for output, adjusted in zip(result, adjusteds):

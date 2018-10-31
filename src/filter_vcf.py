@@ -37,44 +37,48 @@ def main(caller):
 
     csq_list = variant.INFO.get('CSQ')
     include = False
+
     log('assessing variant {} {}...'.format(variant.CHROM, variant.POS))
-    for j, csq in enumerate(csq_list.split(',')): # each transcript
-      csq_fields = csq.split('|')
-      af = csq_fields[gnomad_index]
-      impact = csq_fields[impact_index]
-      sift = csq_fields[sift_index]
-  
-      # check impact
-      if impact == 'LOW':
-        stats['low_impact'] += 1
-        log('skipped transcript {} due to LOW impact'.format(j))
-        continue # next transcript
-  
-      if impact == 'MODIFIER':
-        stats['modifier_impact'] += 1
-        log('skipped transcript {} due to MODIFIER impact'.format(j))
-        continue # next transcript
-  
-      if sift != '' and sift.startswith('tolerated'):
-        stats['tolerated_sift'] += 1
-        log('skipped transcript {} due to tolerated sift: {}'.format(j, sift))
-        continue # next transcript
-  
-      # check allele frequency
-      if af == '':
-        stats['empty_af'] += 1
-        include = True
-        break # print
-  
-      if float(af) <= AF_THRESHOLD:
-        stats['low_af'] += 1
-        include = True
-        break # print
-  
-      else:
-        stats['high_af'] += 1
-        log('skipped transcript {} due to high af: {}'.format(j, af))
-        continue # next transcript
+    if csq_list is None:
+      include = True
+    else:
+      for j, csq in enumerate(csq_list.split(',')): # each transcript
+        csq_fields = csq.split('|')
+        af = csq_fields[gnomad_index]
+        impact = csq_fields[impact_index]
+        sift = csq_fields[sift_index]
+    
+        # check impact
+        if impact == 'LOW':
+          stats['low_impact'] += 1
+          log('skipped transcript {} due to LOW impact'.format(j))
+          continue # next transcript
+    
+        if impact == 'MODIFIER':
+          stats['modifier_impact'] += 1
+          log('skipped transcript {} due to MODIFIER impact'.format(j))
+          continue # next transcript
+    
+        if sift != '' and sift.startswith('tolerated'):
+          stats['tolerated_sift'] += 1
+          log('skipped transcript {} due to tolerated sift: {}'.format(j, sift))
+          continue # next transcript
+    
+        # check allele frequency
+        if af == '':
+          stats['empty_af'] += 1
+          include = True
+          break # print
+    
+        if float(af) <= AF_THRESHOLD:
+          stats['low_af'] += 1
+          include = True
+          break # print
+    
+        else:
+          stats['high_af'] += 1
+          log('skipped transcript {} due to high af: {}'.format(j, af))
+          continue # next transcript
   
     if include:
         log('writing {} {}'.format(variant.CHROM, variant.POS))
